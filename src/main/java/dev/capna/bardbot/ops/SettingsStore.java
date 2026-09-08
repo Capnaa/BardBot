@@ -11,15 +11,18 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.EnumMap;
 import java.util.EnumSet;
+import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 
 /**
  * Keeps the runtime settings, and keeps them across restarts.
  *
- * <p>Reads are a volatile field rather than a lock. Every command checks the maintenance flag and
- * its feature toggle, so this is read constantly and written rarely, and readers must never queue
- * behind somebody flipping a switch.
+ * <p>Reads are a volatile field rather than a lock. Every command checks its feature toggle and
+ * anything that posts checks a channel, so this is read constantly and written rarely, and readers
+ * must never queue behind somebody setting a channel.
  */
 public final class SettingsStore {
 
@@ -29,7 +32,7 @@ public final class SettingsStore {
     private volatile Settings current;
 
     /**
-     * @param defaults used when no settings file exists yet, normally the startup defaults from
+     * @param defaults used when no settings file exists yet, normally the startup features from
      *                 configuration. Once the file exists it wins, since it holds what the tribunal
      *                 last chose and a redeploy must not silently undo that.
      */
@@ -42,30 +45,29 @@ public final class SettingsStore {
         return current;
     }
 
-    public boolean maintenance() {
-        return current.maintenance();
-    }
-
     public boolean isEnabled(Feature feature) {
         return current.isEnabled(feature);
     }
 
-    public synchronized void setMaintenance(boolean value) throws IOException {
-        update(current.withMaintenance(value));
-        LOG.warn("Maintenance mode {}", value ? "ON" : "off");
+    public Optional<String> channel(ChannelRole role) {
+        return current.channel(role);
     }
 
-    public synchronized void setEnabled(Feature feature, boolean on) throws IOException {
-        update(current.with(feature, on));
-        LOG.info("Feature {} {}", feature, on ? "enabled" : "disabled");
+    public synchronized void setChannel(ChannelRole role, String channelId) throws IOException {
+        update(current.with(role, channelId));
+        LOG.info("{} messages now go to channel {}", role.display(), channelId);
     }
 
     private void update(Settings updated) throws IOException {
         JSONArray features = new JSONArray();
-        updated.enabled().forEach(f -> features.put(f.name()));
+        updated.enabled().forEach(feature -> features.put(feature.name()));
+
+        JSONObject channels = new JSONObject();
+        updated.channels().forEach((role, channelId) -> channels.put(role.key(), channelId));
+
         AtomicFiles.writeString(file, new JSONObject()
-                .put("maintenance", updated.maintenance())
                 .put("features", features)
+                .put("channels", channels)
                 .toString(2));
         current = updated;
     }
@@ -76,6 +78,7 @@ public final class SettingsStore {
         }
         try {
             JSONObject json = new JSONObject(Files.readString(file, StandardCharsets.UTF_8));
+
             EnumSet<Feature> enabled = EnumSet.noneOf(Feature.class);
             JSONArray features = json.optJSONArray("features");
             for (int i = 0; features != null && i < features.length(); i++) {
@@ -87,10 +90,21 @@ public final class SettingsStore {
                     LOG.warn("Ignoring unknown feature in settings: {}", features.getString(i));
                 }
             }
-            return new Settings(json.optBoolean("maintenance", false), enabled);
+
+            Map<ChannelRole, String> channels = new EnumMap<>(ChannelRole.class);
+            JSONObject stored = json.optJSONObject("channels");
+            if (stored != null) {
+                for (String key : stored.keySet()) {
+                    ChannelRole.byKey(key).ifPresentOrElse(
+                            role -> channels.put(role, stored.getString(key)),
+                            () -> LOG.warn("Ignoring unknown channel role in settings: {}", key));
+                }
+            }
+
+            return new Settings(enabled, channels);
         } catch (IOException | JSONException e) {
             // Starting with defaults beats not starting. The tribunal's choices are lost, which is
-            // bad, but a bot that will not boot over a malformed toggle file is worse.
+            // bad, but a bot that will not boot over a malformed settings file is worse.
             LOG.error("Could not read settings from {}; using startup defaults", file, e);
             return defaults;
         }

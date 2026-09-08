@@ -36,13 +36,18 @@ public interface SlashCommand {
     }
 
     /**
-     * Runs the command.
+     * Runs the command when it was typed.
      *
      * <p>Called on a JDA event thread. Anything slow must acknowledge first with
      * {@code event.deferReply()}, because Discord discards an interaction that is not answered
      * within three seconds and the user sees a failure whatever the bot does afterwards.
+     *
+     * <p>Defaulted rather than abstract because a command reached only from a message's right-click
+     * menu has no typed form, and forcing it to declare an unreachable one would be noise.
      */
-    void handle(SlashCommandInteractionEvent event) throws Exception;
+    default void handle(SlashCommandInteractionEvent event) throws Exception {
+        Replies.problem(event, "That is not something this command does.");
+    }
 
     /**
      * Runs the command when it was invoked from a message's right-click menu rather than typed.

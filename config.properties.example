@@ -9,13 +9,8 @@ discord.guild.id=YOUR_GUILD_ID
 # One or more role IDs, separated by commas. Required: with nobody privileged, half the bot
 # is unreachable.
 discord.roles.tribunal=YOUR_TRIBUNAL_ROLE_ID
-# Where the bot announces that a Bard has crossed a virtue goal. Blank announces nowhere.
-discord.channel.announcements=
-# Where the monthly renown standings are posted. This channel should be readable by the
-# tribunal only; that is enforced by Discord's own permissions on it, not by the bot.
-discord.channel.renown=
-# Channel the bot mirrors its warnings and errors to. Blank disables mirroring.
-discord.channel.console=
+# Which channels the bot posts in is NOT set here. Use /admin channel in the channel you
+# want, so it can be changed without a restart.
 
 ### Paths ###
 paths.data.dir=data

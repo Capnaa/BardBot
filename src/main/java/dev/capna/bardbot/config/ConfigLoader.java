@@ -11,7 +11,6 @@ import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Optional;
 import java.util.Properties;
 
 /**
@@ -53,10 +52,7 @@ public final class ConfigLoader {
         BotConfig config = new BotConfig(
                 new BotConfig.Discord(
                         id("discord.guild.id"),
-                        ids("discord.roles.tribunal"),
-                        optionalId("discord.channel.announcements"),
-                        optionalId("discord.channel.renown"),
-                        optionalId("discord.channel.console")),
+                        ids("discord.roles.tribunal")),
                 new BotConfig.Paths(
                         path("paths.data.dir", "data")),
                 new BotConfig.Renown(
@@ -95,18 +91,6 @@ public final class ConfigLoader {
             return "";
         }
         return value;
-    }
-
-    private Optional<String> optionalId(String key) {
-        String value = properties.getProperty(key, "").trim();
-        if (value.isEmpty()) {
-            return Optional.empty();
-        }
-        if (!value.matches("\\d{17,20}")) {
-            problems.add(key + " must be a Discord ID (17 to 20 digits), got: " + value);
-            return Optional.empty();
-        }
-        return Optional.of(value);
     }
 
     /**

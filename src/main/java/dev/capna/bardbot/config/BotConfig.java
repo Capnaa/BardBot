@@ -5,7 +5,6 @@ import java.time.Duration;
 import java.time.LocalTime;
 import java.time.ZoneId;
 import java.util.List;
-import java.util.Optional;
 
 /**
  * Everything the bot is configured with, fixed once at startup.
@@ -29,17 +28,12 @@ public record BotConfig(Discord discord,
      *                            role, because the tribunal is a body and Discord servers routinely
      *                            split a body across several roles. Empty is refused at startup:
      *                            with nobody privileged, half the bot is unreachable.
-     * @param announcementChannelId where goal unlocks are posted, absent to announce nowhere
-     * @param renownChannelId     where the monthly standings are posted. Tribunal-only by that
-     *                            channel's own permissions, not by anything the bot enforces, so
-     *                            it must be a channel the rest of the guild cannot read.
-     * @param consoleChannelId    where warnings and errors are mirrored, absent to mirror nowhere
+     *
+     * <p>Which channel the bot posts in is deliberately not here. That is set by command and kept
+     * in {@code ops}, because it changes whenever the server is reorganised and should not need a
+     * file edit and a restart.
      */
-    public record Discord(String guildId,
-                          List<String> tribunalRoleIds,
-                          Optional<String> announcementChannelId,
-                          Optional<String> renownChannelId,
-                          Optional<String> consoleChannelId) {
+    public record Discord(String guildId, List<String> tribunalRoleIds) {
     }
 
     /** @param dataDir durable state the bot owns: profiles, houses, titles, awards, settings */

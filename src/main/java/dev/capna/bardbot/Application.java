@@ -4,7 +4,12 @@ import dev.capna.bardbot.config.BotConfig;
 import dev.capna.bardbot.config.Token;
 import dev.capna.bardbot.discord.BotListener;
 import dev.capna.bardbot.discord.CommandRegistry;
+import dev.capna.bardbot.discord.Tribunal;
+import dev.capna.bardbot.discord.commands.AwardCommand;
+import dev.capna.bardbot.discord.commands.AwardVirtueCommand;
 import dev.capna.bardbot.discord.commands.ProfileCommand;
+import dev.capna.bardbot.virtue.Awarding;
+import dev.capna.bardbot.virtue.Unlocks;
 import dev.capna.bardbot.ops.Feature;
 import dev.capna.bardbot.ops.Settings;
 import dev.capna.bardbot.ops.SettingsStore;
@@ -70,8 +75,14 @@ public final class Application implements AutoCloseable {
                     thread.setDaemon(true);
                     return thread;
                 });
+        Tribunal tribunal = new Tribunal(config.discord().tribunalRoleIds());
+        Awarding awarding = new Awarding(awards, houses, catalogue);
+        Unlocks unlockAnnouncer = new Unlocks(settings);
+
         this.registry = new CommandRegistry(settings)
-                .add(new ProfileCommand(profiles, houses, awards));
+                .add(new ProfileCommand(profiles, houses, awards))
+                .add(new AwardCommand(tribunal, awarding, unlockAnnouncer, profiles, settings))
+                .add(new AwardVirtueCommand(tribunal, awarding, unlockAnnouncer, profiles));
     }
 
     public void start() throws InterruptedException {
@@ -116,7 +127,7 @@ public final class Application implements AutoCloseable {
         if (config.features().titles()) {
             enabled.add(Feature.TITLES);
         }
-        return new Settings(false, enabled);
+        return new Settings(enabled, java.util.Map.of());
     }
 
     @Override

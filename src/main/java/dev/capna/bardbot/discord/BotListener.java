@@ -112,10 +112,6 @@ public final class BotListener extends ListenerAdapter {
             Replies.problem(event, "That has been switched off for now.");
             return;
         }
-        if (settings.maintenance()) {
-            Replies.problem(event, "The bot is down for maintenance. Try again shortly.");
-            return;
-        }
         if (isTooSoon(event.getUser().getId())) {
             Replies.problem(event, "You are doing that too quickly. Give it a moment.");
             return;
