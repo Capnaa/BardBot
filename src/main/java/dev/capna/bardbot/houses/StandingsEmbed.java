@@ -25,7 +25,7 @@ public final class StandingsEmbed {
 
     public static MessageEmbed of(Standings standings) {
         EmbedBuilder embed = new EmbedBuilder()
-                .setTitle("Renown — " + MONTH.format(standings.month()));
+                .setTitle("Renown, " + MONTH.format(standings.month()));
 
         if (standings.places().isEmpty()) {
             embed.setDescription("There were no houses.");
@@ -37,7 +37,7 @@ public final class StandingsEmbed {
             Standings.Place place = standings.places().get(i);
             rows.append(i + 1).append(". ")
                     .append(Names.escaped(place.houseName()))
-                    .append(" — ").append(place.renown())
+                    .append(", ").append(place.renown())
                     .append('\n');
         }
         embed.setDescription(rows.toString());

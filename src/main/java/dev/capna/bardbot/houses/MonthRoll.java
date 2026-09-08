@@ -30,7 +30,7 @@ import java.util.Optional;
  * would repost February's result on every restart for a day.
  *
  * <p>It catches up rather than only handling the month just gone. A bot that was down across a
- * boundary — or across three of them — settles every month it missed, oldest first, so the record
+ * boundary, or across three of them, settles every month it missed, oldest first, so the record
  * has no holes in it.
  */
 public final class MonthRoll {

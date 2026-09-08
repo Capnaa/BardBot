@@ -25,7 +25,7 @@ public final class AwardEmbed {
         String headline = signed(result.amount()) + " " + result.virtue().display();
         // The reason is the one part of an award a person wrote, so it is the one part escaped.
         String description = reason
-                .map(text -> headline + "\n— " + Names.escaped(text))
+                .map(text -> headline + "\nFor: " + Names.escaped(text))
                 .orElse(headline);
 
         return new EmbedBuilder()

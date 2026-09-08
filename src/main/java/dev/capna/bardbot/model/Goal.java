@@ -29,7 +29,7 @@ public record Goal(Optional<Virtue> virtue,
      * <p>Crossing, not meeting: an award that leaves someone already past a goal still past it has
      * not unlocked anything, and announcing it again would make the announcements worthless. A
      * negative award that drops someone back below is likewise not a crossing, and is deliberately
-     * silent — there is no announcement for losing a title.
+     * silent, there is no announcement for losing a title.
      */
     public boolean crossedBy(int before, int after) {
         return !metBy(before) && metBy(after);

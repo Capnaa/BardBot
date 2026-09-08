@@ -54,7 +54,7 @@ public final class Unlocks {
     }
 
     private static String message(String recipientId, List<Goal> crossed) {
-        StringBuilder text = new StringBuilder("<@").append(recipientId).append("> — ");
+        StringBuilder text = new StringBuilder("<@").append(recipientId).append("> has reached ");
 
         text.append(String.join(", and ", crossed.stream().map(Unlocks::reached).toList()))
                 .append('.');
@@ -73,10 +73,9 @@ public final class Unlocks {
         return text.toString();
     }
 
-    /** {@code 40 Honor reached}, or {@code 100 total virtue reached} for a goal with no virtue. */
+    /** {@code 40 Honor}, or {@code 100 total virtue} for a goal measured against the total. */
     private static String reached(Goal goal) {
         return goal.threshold() + " "
-                + goal.virtue().map(virtue -> virtue.display()).orElse("total virtue")
-                + " reached";
+                + goal.virtue().map(virtue -> virtue.display()).orElse("total virtue");
     }
 }

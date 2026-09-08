@@ -204,13 +204,13 @@ public final class ProfileCommand implements SlashCommand {
                 .toList();
 
         StringBuilder tree = new StringBuilder();
-        tree.append(held.headIds().size() == 1 ? "Head" : "Heads").append(" — ")
+        tree.append(held.headIds().size() == 1 ? "Head" : "Heads").append(": ")
                 .append(heads.isEmpty() ? "None" : heads);
         if (!members.isEmpty()) {
             java.util.List<String> shown = members.size() > MAX_MEMBERS_SHOWN
                     ? members.subList(0, MAX_MEMBERS_SHOWN)
                     : members;
-            tree.append("\nMembers — ").append(String.join(", ", shown));
+            tree.append("\nMembers: ").append(String.join(", ", shown));
             if (members.size() > shown.size()) {
                 tree.append(" and ").append(members.size() - shown.size()).append(" more");
             }

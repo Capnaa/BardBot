@@ -20,7 +20,7 @@ import java.util.Optional;
 /**
  * Making an award, wherever it was asked for.
  *
- * <p>Two commands award virtue — the right-click menu on a message and the slash command — and they
+ * <p>Two commands award virtue, the right-click menu on a message and the slash command, and they
  * must do exactly the same thing: record it against the same house, compute the same before and
  * after, and notice the same goals being crossed. Doing that in one place is the only way to be
  * sure they do not drift apart.

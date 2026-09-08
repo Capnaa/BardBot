@@ -35,7 +35,7 @@ import java.util.Optional;
  *
  * <p>This is the gesture the bot was asked for: read something good, award the Bard who wrote it,
  * without typing their name. A slash command cannot be used as a reply to a message, so it is a
- * message command instead — right-click the message, Apps, Award Virtue.
+ * message command instead, right-click the message, Apps, Award Virtue.
  *
  * <p>Three steps, because Discord will not put a dropdown inside a form. The menu identifies the
  * Bard, four buttons pick the virtue, and the form takes the amount and the reason. Everything

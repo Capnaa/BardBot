@@ -9,6 +9,7 @@ import dev.capna.bardbot.discord.Tribunal;
 import dev.capna.bardbot.discord.commands.AdminCommand;
 import dev.capna.bardbot.discord.commands.AwardCommand;
 import dev.capna.bardbot.discord.commands.AwardVirtueCommand;
+import dev.capna.bardbot.discord.commands.HelpCommand;
 import dev.capna.bardbot.discord.commands.HouseCommand;
 import dev.capna.bardbot.houses.MonthRoll;
 import dev.capna.bardbot.houses.Renown;
@@ -112,7 +113,8 @@ public final class Application implements AutoCloseable {
                 .add(new VirtueCommand(awards, catalogue, profiles, config.renown().zone()))
                 .add(new TitleCommand(titleHoldings, profiles))
                 .add(new AdminCommand(tribunal, settings, catalogue, houses, profiles, boards))
-                .add(new HouseCommand(houses, profiles, houseRenown, renown));
+                .add(new HouseCommand(houses, profiles, houseRenown, renown))
+                .add(new HelpCommand());
     }
 
     public void start() throws InterruptedException {

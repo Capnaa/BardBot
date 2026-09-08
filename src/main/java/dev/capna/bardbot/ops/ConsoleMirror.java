@@ -54,7 +54,7 @@ public final class ConsoleMirror extends AppenderBase<ILoggingEvent> {
         }
         String line = event.getLevel() + " " + event.getLoggerName()
                 .substring(event.getLoggerName().lastIndexOf('.') + 1)
-                + " — " + event.getFormattedMessage();
+                + ", " + event.getFormattedMessage();
         synchronized (pending) {
             pending.merge(line, 1, Integer::sum);
         }

@@ -7,7 +7,7 @@ import java.util.Optional;
 /**
  * The three places a title can sit in a Bard's name.
  *
- * <p>They read as one line — {@code Lord Prophet Azurov the Veteran of The Tribunal} — but they are
+ * <p>They read as one line, {@code Lord Prophet Azurov the Veteran of The Tribunal}, but they are
  * granted by three different authorities and are otherwise unrelated. Keeping them as separate
  * slots is what lets a Bard hold one, two or all three without any of the words between them
  * needing a special case.

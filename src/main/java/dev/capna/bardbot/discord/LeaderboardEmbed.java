@@ -54,7 +54,7 @@ public final class LeaderboardEmbed {
             rows.append(place(standings, entry.getKey()))
                     .append(". ")
                     .append(name(profiles, entry.getKey()))
-                    .append(" — ")
+                    .append(": ")
                     .append(entry.getValue())
                     .append('\n');
         }
@@ -64,7 +64,7 @@ public final class LeaderboardEmbed {
         Ranks.of(standings, viewer).ifPresent(rank -> {
             boolean onThisPage = rank > from && rank <= to;
             if (!onThisPage) {
-                embed.addField("You", "#" + rank + " — " + standings.get(viewer), false);
+                embed.addField("You", "#" + rank + ", " + standings.get(viewer), false);
             }
         });
 
@@ -73,7 +73,7 @@ public final class LeaderboardEmbed {
     }
 
     private static String place(Map<String, Integer> standings, String userId) {
-        return Ranks.of(standings, userId).map(String::valueOf).orElse("—");
+        return Ranks.of(standings, userId).map(String::valueOf).orElse("");
     }
 
     /**

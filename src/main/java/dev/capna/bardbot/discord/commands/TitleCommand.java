@@ -188,7 +188,7 @@ public final class TitleCommand implements SlashCommand {
         profiles.all().stream()
                 .filter(profile -> !profile.governmentTitles().isEmpty())
                 .forEach(profile -> rows
-                        .append("<@").append(profile.userId()).append("> — ")
+                        .append("<@").append(profile.userId()).append(">: ")
                         .append(String.join(", ", profile.governmentTitles().stream()
                                 .map(Names::escaped).toList()))
                         .append('\n'));

@@ -102,6 +102,6 @@ public final class ProfileEmbed {
     /** A rank of nothing is a dash. Last place among everyone on zero is not worth printing. */
     private static String row(String label, int score, Optional<Integer> rank) {
         return String.format("%-6s %5d   %s%n", label, score,
-                rank.map(place -> "#" + place).orElse("—"));
+                rank.map(place -> "#" + place).orElse(""));
     }
 }

@@ -199,7 +199,7 @@ public final class VirtueCommand implements SlashCommand {
         for (Award award : history) {
             rows.append(award.amount() > 0 ? "+" : "").append(award.amount())
                     .append(' ').append(award.virtue().display())
-                    .append(" — ").append(WHEN.format(award.at().atZone(zone)));
+                    .append(", ").append(WHEN.format(award.at().atZone(zone)));
             award.reason().ifPresent(reason ->
                     rows.append("\n  ").append(Names.escaped(reason)));
             rows.append('\n');

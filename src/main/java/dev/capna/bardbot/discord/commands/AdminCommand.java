@@ -15,6 +15,8 @@ import dev.capna.bardbot.ops.SettingsStore;
 import dev.capna.bardbot.store.CatalogueStore;
 import dev.capna.bardbot.store.HouseStore;
 import dev.capna.bardbot.store.ProfileStore;
+import net.dv8tion.jda.api.EmbedBuilder;
+import net.dv8tion.jda.api.entities.MessageEmbed;
 import net.dv8tion.jda.api.entities.User;
 import net.dv8tion.jda.api.events.interaction.command.CommandAutoCompleteInteractionEvent;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
@@ -82,6 +84,8 @@ public final class AdminCommand implements SlashCommand {
         virtue.addChoice("Total", "total");
 
         return Commands.slash(NAME, "Tribunal business")
+                .addSubcommands(new SubcommandData("help",
+                        "How to award virtue and run the bot"))
                 .addSubcommandGroups(
                         new SubcommandGroupData("channel", "Where the bot posts")
                                 .addSubcommands(new SubcommandData("set",
@@ -142,8 +146,17 @@ public final class AdminCommand implements SlashCommand {
         if (!tribunal.check(event)) {
             return;
         }
-        String group = Objects.requireNonNull(event.getSubcommandGroup());
         String subcommand = Objects.requireNonNull(event.getSubcommandName());
+        String group = event.getSubcommandGroup();
+        if (group == null) {
+            // The only subcommand that is not in a group.
+            if ("help".equals(subcommand)) {
+                event.replyEmbeds(help()).setEphemeral(true).queue();
+            } else {
+                Replies.problem(event, "That is not something this command does.");
+            }
+            return;
+        }
 
         switch (group) {
             case "channel" -> channel(event);
@@ -192,7 +205,7 @@ public final class AdminCommand implements SlashCommand {
             for (Goal goal : goals) {
                 rows.append(goal.virtue().map(Virtue::display).orElse("Total"))
                         .append(' ').append(goal.threshold())
-                        .append(" — ").append(goal.title().orElse("(no title)"))
+                        .append(": ").append(goal.title().orElse("(no title)"))
                         .append('\n');
             }
             Replies.quietly(event, rows.toString());
@@ -333,5 +346,63 @@ public final class AdminCommand implements SlashCommand {
         return Optional.ofNullable(event.getOption(name, OptionMapping::getAsString))
                 .map(String::strip)
                 .filter(value -> !value.isEmpty());
+    }
+
+    private MessageEmbed help() {
+        return new EmbedBuilder()
+                .setTitle("Tribunal")
+                .setDescription("""
+                        You can award virtue and configure the bot. Nobody else can.""")
+                .addField("Awarding for something somebody posted",
+                        """
+                        **Hover the message** and click the `⋯` on the right, then **Apps**, \
+                        then **Award Virtue**. On a phone, press and hold the message and pick \
+                        **Apps**.
+
+                        Four buttons appear, Honor, Merit, Glory, Fame. Click one. A box opens \
+                        for the amount and the reason. Press Submit.
+
+                        The bot replies to that message with the award and the Bard's new \
+                        scores.""", false)
+                .addField("Awarding without a message",
+                        """
+                        Run `/award`, pick the Bard, the virtue and the amount, and optionally a \
+                        reason.
+
+                        **To take an award back, award a negative amount**: for example `-3`. \
+                        Awards are never deleted, so the record shows what happened and the \
+                        correction alongside it.""", false)
+                .addField("Setting up channels",
+                        """
+                        Go to the channel you want, then run `/admin channel set` and pick which \
+                        messages belong there:
+
+                        **Awards**: every award. **Unlocks**: only when somebody reaches a \
+                        goal. **Renown**: the monthly house results; use a channel only the \
+                        tribunal can read. **Console**: the bot's own errors.
+
+                        You can point more than one at the same channel.""", false)
+                .addField("Goals and titles",
+                        """
+                        `/admin goal add`: set a score that unlocks a virtue title. Adding one \
+                        at a score that already has a goal replaces it.
+                        `/admin goal remove`, `/admin goal list`: the rest.
+                        `/admin title grant`: give a Bard a government title. Type it exactly \
+                        as it should read, for example `of The Tribunal`.
+                        `/admin title revoke`: take one back.""", false)
+                .addField("Houses",
+                        """
+                        `/admin house add`: found a house. You must name a head at the same \
+                        time, because a house without one cannot do anything.
+                        `/admin house addhead` / `removehead`: change who leads it.
+                        `/admin house remove`: dissolve it. Its past renown stays on record.""",
+                        false)
+                .addField("Standing leaderboards",
+                        """
+                        Go to a channel and run `/admin leaderboard virtue` or \
+                        `/admin leaderboard house`. The bot posts one message there and keeps \
+                        editing it as awards come in. Do not delete that message, if you do, \
+                        run the command again to make a new one.""", false)
+                .build();
     }
 }

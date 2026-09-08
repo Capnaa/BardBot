@@ -80,7 +80,7 @@ public final class HouseEmbed {
             Standings.Place place = places.get(i);
             rows.append(i + 1).append(". ")
                     .append(Names.escaped(place.houseName()))
-                    .append(" — ").append(place.renown())
+                    .append(": ").append(place.renown())
                     .append('\n');
         }
         embed.setDescription(rows.toString());

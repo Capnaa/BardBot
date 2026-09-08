@@ -161,7 +161,7 @@ public final class HouseCommand implements SlashCommand {
         StringBuilder rows = new StringBuilder();
         for (House house : all) {
             rows.append(Names.escaped(house.name()))
-                    .append(" — ").append(renown.allTimeFor(house.id())).append(" renown, ")
+                    .append(": ").append(renown.allTimeFor(house.id())).append(" renown, ")
                     .append(house.everyone().size())
                     .append(house.everyone().size() == 1 ? " member" : " members")
                     .append('\n');
@@ -254,7 +254,7 @@ public final class HouseCommand implements SlashCommand {
             return;
         }
         houses.invite(house.get().id(), bard.getId());
-        event.reply("<@" + bard.getId() + "> — " + Names.escaped(house.get().name())
+        event.reply("<@" + bard.getId() + ">, " + Names.escaped(house.get().name())
                 + " has invited you. Accept with /house accept, or turn it down with "
                 + "/house decline.").queue();
     }
@@ -333,8 +333,8 @@ public final class HouseCommand implements SlashCommand {
     /**
      * The house this Bard heads, or nothing, having already said why.
      *
-     * <p>Refusing here rather than in each command keeps the two failures — not in a house, in one
-     * but not leading it — worded the same wherever they happen.
+     * <p>Refusing here rather than in each command keeps the two failures, not in a house, in one
+     * but not leading it, worded the same wherever they happen.
      */
     private Optional<House> headOf(SlashCommandInteractionEvent event) {
         Optional<House> house = houses.holding(event.getUser().getId());
