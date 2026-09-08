@@ -72,13 +72,17 @@ public final class HouseStore {
     }
 
     /**
-     * Creates a house.
+     * Creates a house under a head.
      *
-     * @throws HouseRejected if the name is taken or unusable, or the roll is full. Rejections are
-     *                       distinct from failures: the caller reports them to whoever asked rather
-     *                       than logging them as faults.
+     * <p>The head is given at creation rather than appointed afterwards, because a house without
+     * one is a dead end: nobody can invite anyone into it or edit it, and the only way out is a
+     * second command that the tribunal has to remember to run. It can still be changed later.
+     *
+     * @throws HouseRejected if the name is taken or unusable, the roll is full, or the head already
+     *                       belongs to a house. Rejections are distinct from failures: the caller
+     *                       reports them to whoever asked rather than logging them as faults.
      */
-    public synchronized House add(String name) throws IOException, HouseRejected {
+    public synchronized House add(String name, String headId) throws IOException, HouseRejected {
         load();
         String trimmed = name.strip();
         if (trimmed.isEmpty() || trimmed.length() > House.MAX_NAME) {
@@ -99,9 +103,14 @@ public final class HouseStore {
         if (byId.containsKey(id)) {
             throw new HouseRejected("That name is too close to an existing house's to tell apart.");
         }
+        Optional<House> existing = holding(headId);
+        if (existing.isPresent()) {
+            throw new HouseRejected("That Bard is already in " + existing.get().name()
+                    + ". They have to leave it before they can head a new house.");
+        }
 
         House house = new House(id, trimmed, Optional.empty(), Optional.empty(), Optional.empty(),
-                List.of(), Set.of(), Set.of(), List.of(), Map.of());
+                List.of(headId), Set.of(), Set.of(), List.of(), Map.of());
         byId.put(id, house);
         persistOrRollBack(id, null);
         return house;
@@ -136,6 +145,64 @@ public final class HouseStore {
         byId.put(key, updated);
         persistOrRollBack(key, previous);
         return updated;
+    }
+
+    /**
+     * Appoints another head.
+     *
+     * <p>More than one is allowed: a house may genuinely be led by two people, and the alternative
+     * is a handover where the house is briefly headless.
+     *
+     * @throws HouseRejected if they already lead it, or belong to another house
+     */
+    public synchronized House addHead(String id, String userId) throws IOException, HouseRejected {
+        load();
+        House house = require(id);
+        if (house.isHead(userId)) {
+            throw new HouseRejected("They already head " + house.name() + ".");
+        }
+        Optional<House> elsewhere = holding(userId);
+        if (elsewhere.isPresent() && !elsewhere.get().id().equals(house.id())) {
+            throw new HouseRejected("That Bard is already in " + elsewhere.get().name()
+                    + ". They have to leave it before they can head another house.");
+        }
+        List<String> heads = new ArrayList<>(house.headIds());
+        heads.add(userId);
+        return update(house.id(), current -> withHeads(current, heads));
+    }
+
+    /**
+     * Stands a head down.
+     *
+     * <p>The last one cannot be removed. A headless house cannot be edited, cannot invite anyone
+     * and cannot grant its own titles, so it would be a house nobody could do anything with and
+     * nothing in the bot would say why.
+     *
+     * @throws HouseRejected if they do not head it, or they are the only one who does
+     */
+    public synchronized House removeHead(String id, String userId) throws IOException, HouseRejected {
+        load();
+        House house = require(id);
+        if (!house.isHead(userId)) {
+            throw new HouseRejected("They do not head " + house.name() + ".");
+        }
+        if (house.headIds().size() == 1) {
+            throw new HouseRejected(house.name() + " would be left with no head. "
+                    + "Appoint another one first, or remove the house.");
+        }
+        List<String> heads = new ArrayList<>(house.headIds());
+        heads.remove(userId);
+        return update(house.id(), current -> withHeads(current, heads));
+    }
+
+    private House require(String id) {
+        return byId(id).orElseThrow(() -> new IllegalArgumentException("No house with id " + id));
+    }
+
+    private static House withHeads(House house, List<String> heads) {
+        return new House(house.id(), house.name(), house.motto(), house.description(),
+                house.crestUrl(), heads, house.memberIds(), house.invitedIds(),
+                house.nobleTitles(), house.nobleGrants());
     }
 
     /**
