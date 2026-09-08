@@ -141,6 +141,17 @@ public final class AwardLog {
         return byHouse;
     }
 
+    /**
+     * When the first award was made, or empty when none ever has been.
+     *
+     * <p>Used to decide how far back the monthly roll has to look. Without it, a bot that was down
+     * for two months would settle only the most recent one and leave a hole in the record.
+     */
+    public synchronized Optional<Instant> earliest() {
+        load();
+        return awards.stream().map(Award::at).min(Instant::compareTo);
+    }
+
     /** One Bard's awards, most recent first, for when a number is being argued about. */
     public synchronized List<Award> history(String userId, int limit) {
         load();

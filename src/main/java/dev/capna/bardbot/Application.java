@@ -4,16 +4,21 @@ import dev.capna.bardbot.config.BotConfig;
 import dev.capna.bardbot.config.Token;
 import dev.capna.bardbot.discord.BotListener;
 import dev.capna.bardbot.discord.CommandRegistry;
+import dev.capna.bardbot.discord.LiveBoards;
 import dev.capna.bardbot.discord.Tribunal;
 import dev.capna.bardbot.discord.commands.AdminCommand;
 import dev.capna.bardbot.discord.commands.AwardCommand;
 import dev.capna.bardbot.discord.commands.AwardVirtueCommand;
+import dev.capna.bardbot.discord.commands.HouseCommand;
+import dev.capna.bardbot.houses.MonthRoll;
+import dev.capna.bardbot.houses.Renown;
 import dev.capna.bardbot.discord.commands.ProfileCommand;
 import dev.capna.bardbot.discord.commands.TitleCommand;
 import dev.capna.bardbot.discord.commands.VirtueCommand;
 import dev.capna.bardbot.titles.Titles;
 import dev.capna.bardbot.virtue.Awarding;
 import dev.capna.bardbot.virtue.Unlocks;
+import dev.capna.bardbot.ops.ConsoleMirror;
 import dev.capna.bardbot.ops.Feature;
 import dev.capna.bardbot.ops.Settings;
 import dev.capna.bardbot.ops.SettingsStore;
@@ -31,8 +36,11 @@ import org.slf4j.LoggerFactory;
 
 import java.util.EnumSet;
 import java.util.Objects;
+import java.time.Duration;
+import java.time.ZonedDateTime;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -57,7 +65,9 @@ public final class Application implements AutoCloseable {
     private final RenownStore renown;
 
     private final ExecutorService commands;
+    private final ScheduledExecutorService schedule;
     private final CommandRegistry registry;
+    private final MonthRoll monthRoll;
 
     private JDA jda;
 
@@ -81,16 +91,28 @@ public final class Application implements AutoCloseable {
                 });
         Tribunal tribunal = new Tribunal(config.discord().tribunalRoleIds());
         Titles titleHoldings = new Titles(profiles, houses, awards, catalogue);
+        Renown houseRenown = new Renown(awards, houses, config.renown().zone());
         Awarding awarding = new Awarding(awards, houses, catalogue);
         Unlocks unlockAnnouncer = new Unlocks(settings);
 
+        this.monthRoll = new MonthRoll(houseRenown, renown, awards, settings,
+                config.renown().zone());
+        this.schedule = Executors.newSingleThreadScheduledExecutor(runnable -> {
+            Thread thread = new Thread(runnable, "schedule");
+            thread.setDaemon(true);
+            return thread;
+        });
+
+        LiveBoards boards = new LiveBoards(settings, awards, profiles, houseRenown, schedule);
+
         this.registry = new CommandRegistry(settings)
                 .add(new ProfileCommand(profiles, houses, awards, titleHoldings))
-                .add(new AwardCommand(tribunal, awarding, unlockAnnouncer, profiles, settings))
-                .add(new AwardVirtueCommand(tribunal, awarding, unlockAnnouncer, profiles))
+                .add(new AwardCommand(tribunal, awarding, unlockAnnouncer, profiles, settings, boards))
+                .add(new AwardVirtueCommand(tribunal, awarding, unlockAnnouncer, profiles, boards))
                 .add(new VirtueCommand(awards, catalogue, profiles, config.renown().zone()))
                 .add(new TitleCommand(titleHoldings, profiles))
-                .add(new AdminCommand(tribunal, settings, catalogue, houses, profiles));
+                .add(new AdminCommand(tribunal, settings, catalogue, houses, profiles, boards))
+                .add(new HouseCommand(houses, profiles, houseRenown, renown));
     }
 
     public void start() throws InterruptedException {
@@ -112,7 +134,52 @@ public final class Application implements AutoCloseable {
                 registered -> LOG.info("Registered {} command(s) to {}", registered.size(), guild.getName()),
                 error -> LOG.error("Could not register commands", error));
 
+        attachConsoleMirror();
+
+        // Checked at startup as well as on the schedule, so a bot that was down when a month
+        // ended settles it as soon as it is back rather than waiting for the next one.
+        monthRoll.settleDue(jda);
+        schedule.scheduleAtFixedRate(() -> {
+            try {
+                monthRoll.settleDue(jda);
+            } catch (RuntimeException e) {
+                LOG.error("The monthly roll failed; it will be tried again", e);
+            }
+        }, untilNextRoll().toSeconds(), Duration.ofDays(1).toSeconds(), TimeUnit.SECONDS);
+
         LOG.info("BardBot is up in {}", guild.getName());
+    }
+
+    /**
+     * Starts mirroring warnings and errors into Discord.
+     *
+     * <p>Attached after the connection is up, since it has nowhere to send anything before then,
+     * and left attached whether or not a console channel is set: the channel is read at send time,
+     * so setting one takes effect immediately rather than at the next restart.
+     */
+    private void attachConsoleMirror() {
+        ch.qos.logback.classic.Logger root = (ch.qos.logback.classic.Logger)
+                org.slf4j.LoggerFactory.getLogger(org.slf4j.Logger.ROOT_LOGGER_NAME);
+        ConsoleMirror mirror = new ConsoleMirror(jda, settings, schedule);
+        mirror.setContext(root.getLoggerContext());
+        mirror.start();
+        root.addAppender(mirror);
+    }
+
+    /**
+     * How long until the next time of day the roll is due.
+     *
+     * <p>Daily rather than monthly, because a daily task that usually finds nothing to do is far
+     * harder to get wrong than one that has to fire on exactly the right date, and the cost of
+     * being wrong there is a month that never settles.
+     */
+    private Duration untilNextRoll() {
+        ZonedDateTime now = ZonedDateTime.now(config.renown().zone());
+        ZonedDateTime next = now.with(config.renown().rollAt());
+        if (!next.isAfter(now)) {
+            next = next.plusDays(1);
+        }
+        return Duration.between(now, next);
     }
 
     /**
@@ -135,13 +202,14 @@ public final class Application implements AutoCloseable {
         if (config.features().titles()) {
             enabled.add(Feature.TITLES);
         }
-        return new Settings(enabled, java.util.Map.of());
+        return new Settings(enabled, java.util.Map.of(), java.util.Map.of());
     }
 
     @Override
     public void close() {
         // Stop accepting work before disconnecting, so nothing is halfway through a store write
         // when the connection goes.
+        schedule.shutdownNow();
         commands.shutdown();
         try {
             if (!commands.awaitTermination(10, TimeUnit.SECONDS)) {

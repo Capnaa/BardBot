@@ -8,6 +8,8 @@ import dev.capna.bardbot.model.Goal;
 import dev.capna.bardbot.model.House;
 import dev.capna.bardbot.model.Profile;
 import dev.capna.bardbot.model.Virtue;
+import dev.capna.bardbot.discord.LiveBoards;
+import dev.capna.bardbot.ops.BoardKind;
 import dev.capna.bardbot.ops.ChannelRole;
 import dev.capna.bardbot.ops.SettingsStore;
 import dev.capna.bardbot.store.CatalogueStore;
@@ -50,14 +52,16 @@ public final class AdminCommand implements SlashCommand {
     private final CatalogueStore catalogue;
     private final HouseStore houses;
     private final ProfileStore profiles;
+    private final LiveBoards boards;
 
     public AdminCommand(Tribunal tribunal, SettingsStore settings, CatalogueStore catalogue,
-                        HouseStore houses, ProfileStore profiles) {
+                        HouseStore houses, ProfileStore profiles, LiveBoards boards) {
         this.tribunal = Objects.requireNonNull(tribunal, "tribunal");
         this.settings = Objects.requireNonNull(settings, "settings");
         this.catalogue = Objects.requireNonNull(catalogue, "catalogue");
         this.houses = Objects.requireNonNull(houses, "houses");
         this.profiles = Objects.requireNonNull(profiles, "profiles");
+        this.boards = Objects.requireNonNull(boards, "boards");
     }
 
     @Override
@@ -114,6 +118,13 @@ public final class AdminCommand implements SlashCommand {
                                                 .addOption(OptionType.STRING, "name", "Which house",
                                                         true, true)
                                                 .addOption(OptionType.USER, "bard", "Who", true)),
+                        new SubcommandGroupData("leaderboard",
+                                "Standing boards that keep themselves up to date")
+                                .addSubcommands(
+                                        new SubcommandData("virtue",
+                                                "Put the total virtue board in this channel"),
+                                        new SubcommandData("house",
+                                                "Put the house renown board in this channel")),
                         new SubcommandGroupData("title", "Government titles")
                                 .addSubcommands(
                                         new SubcommandData("grant", "Give a Bard a government title")
@@ -139,8 +150,28 @@ public final class AdminCommand implements SlashCommand {
             case "goal" -> goal(event, subcommand);
             case "house" -> house(event, subcommand);
             case "title" -> title(event, subcommand);
+            case "leaderboard" -> leaderboard(event, subcommand);
             default -> Replies.problem(event, "That is not something this command does.");
         }
+    }
+
+    /**
+     * Plants a board in this channel.
+     *
+     * <p>Posted once and then edited forever. The message ID is remembered so a restart keeps
+     * updating the same message rather than leaving it stale and posting another.
+     */
+    private void leaderboard(SlashCommandInteractionEvent event, String subcommand) {
+        BoardKind kind = BoardKind.byKey(subcommand).orElseThrow();
+        event.getChannel().sendMessageEmbeds(boards.render(kind)).queue(message -> {
+            try {
+                settings.setBoard(kind, event.getChannelId(), message.getId());
+                Replies.quietly(event, kind.display()
+                        + " will be kept up to date here from now on.");
+            } catch (Exception e) {
+                Replies.failed(event, "admin", e);
+            }
+        });
     }
 
     private void channel(SlashCommandInteractionEvent event) throws Exception {

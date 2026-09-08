@@ -18,18 +18,36 @@ import java.util.Set;
  *
  * @param enabled  features currently switched on, seeded from configuration at first start
  * @param channels which channel does which job, empty for a job nothing is set for yet
+ * @param boards   where each standing leaderboard lives, as {@code channelId/messageId}. The
+ *                 message is remembered rather than reposted, so the channel holds one board that
+ *                 is always current instead of a scroll of stale ones.
  */
-public record Settings(Set<Feature> enabled, Map<ChannelRole, String> channels) {
+public record Settings(Set<Feature> enabled,
+                       Map<ChannelRole, String> channels,
+                       Map<BoardKind, String> boards) {
 
     public Settings {
         enabled = Set.copyOf(enabled);
         channels = Map.copyOf(channels);
+        boards = Map.copyOf(boards);
     }
 
     public static Settings of(Feature... features) {
         return new Settings(features.length == 0
                 ? EnumSet.noneOf(Feature.class)
-                : EnumSet.copyOf(Set.of(features)), Map.of());
+                : EnumSet.copyOf(Set.of(features)), Map.of(), Map.of());
+    }
+
+    public Optional<String> board(BoardKind kind) {
+        return Optional.ofNullable(boards.get(kind));
+    }
+
+    public Settings with(BoardKind kind, String channelId, String messageId) {
+        Map<BoardKind, String> updated = boards.isEmpty()
+                ? new EnumMap<>(BoardKind.class)
+                : new EnumMap<>(boards);
+        updated.put(kind, channelId + "/" + messageId);
+        return new Settings(enabled, channels, updated);
     }
 
     public boolean isEnabled(Feature feature) {
@@ -50,7 +68,7 @@ public record Settings(Set<Feature> enabled, Map<ChannelRole, String> channels) 
         } else {
             updated.remove(feature);
         }
-        return new Settings(updated, channels);
+        return new Settings(updated, channels, boards);
     }
 
     public Settings with(ChannelRole role, String channelId) {
@@ -58,6 +76,6 @@ public record Settings(Set<Feature> enabled, Map<ChannelRole, String> channels) 
                 ? new EnumMap<>(ChannelRole.class)
                 : new EnumMap<>(channels);
         updated.put(role, channelId);
-        return new Settings(enabled, updated);
+        return new Settings(enabled, updated, boards);
     }
 }

@@ -1,6 +1,7 @@
 package dev.capna.bardbot.discord.commands;
 
 import dev.capna.bardbot.discord.AwardEmbed;
+import dev.capna.bardbot.discord.LiveBoards;
 import dev.capna.bardbot.discord.Replies;
 import dev.capna.bardbot.discord.SlashCommand;
 import dev.capna.bardbot.discord.Tribunal;
@@ -45,14 +46,16 @@ public final class AwardCommand implements SlashCommand {
     private final Unlocks unlocks;
     private final ProfileStore profiles;
     private final SettingsStore settings;
+    private final LiveBoards boards;
 
     public AwardCommand(Tribunal tribunal, Awarding awarding, Unlocks unlocks,
-                        ProfileStore profiles, SettingsStore settings) {
+                        ProfileStore profiles, SettingsStore settings, LiveBoards boards) {
         this.tribunal = Objects.requireNonNull(tribunal, "tribunal");
         this.awarding = Objects.requireNonNull(awarding, "awarding");
         this.unlocks = Objects.requireNonNull(unlocks, "unlocks");
         this.profiles = Objects.requireNonNull(profiles, "profiles");
         this.settings = Objects.requireNonNull(settings, "settings");
+        this.boards = Objects.requireNonNull(boards, "boards");
     }
 
     @Override
@@ -123,6 +126,7 @@ public final class AwardCommand implements SlashCommand {
         }
 
         unlocks.announce(event.getJDA(), recipient.getId(), result.crossed());
+        boards.refreshSoon(event.getJDA());
     }
 
     /**
