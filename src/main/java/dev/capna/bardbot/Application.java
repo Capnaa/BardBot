@@ -8,6 +8,7 @@ import dev.capna.bardbot.discord.Tribunal;
 import dev.capna.bardbot.discord.commands.AwardCommand;
 import dev.capna.bardbot.discord.commands.AwardVirtueCommand;
 import dev.capna.bardbot.discord.commands.ProfileCommand;
+import dev.capna.bardbot.discord.commands.VirtueCommand;
 import dev.capna.bardbot.virtue.Awarding;
 import dev.capna.bardbot.virtue.Unlocks;
 import dev.capna.bardbot.ops.Feature;
@@ -82,7 +83,8 @@ public final class Application implements AutoCloseable {
         this.registry = new CommandRegistry(settings)
                 .add(new ProfileCommand(profiles, houses, awards))
                 .add(new AwardCommand(tribunal, awarding, unlockAnnouncer, profiles, settings))
-                .add(new AwardVirtueCommand(tribunal, awarding, unlockAnnouncer, profiles));
+                .add(new AwardVirtueCommand(tribunal, awarding, unlockAnnouncer, profiles))
+                .add(new VirtueCommand(awards, catalogue, profiles, config.renown().zone()));
     }
 
     public void start() throws InterruptedException {
