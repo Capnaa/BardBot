@@ -10,6 +10,7 @@ import dev.capna.bardbot.ops.Feature;
 import dev.capna.bardbot.store.AwardLog;
 import dev.capna.bardbot.store.HouseStore;
 import dev.capna.bardbot.store.ProfileStore;
+import dev.capna.bardbot.titles.Titles;
 import net.dv8tion.jda.api.entities.User;
 import net.dv8tion.jda.api.events.interaction.ModalInteractionEvent;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
@@ -49,11 +50,13 @@ public final class ProfileCommand implements SlashCommand {
     private final ProfileStore profiles;
     private final HouseStore houses;
     private final AwardLog awards;
+    private final Titles titles;
 
-    public ProfileCommand(ProfileStore profiles, HouseStore houses, AwardLog awards) {
+    public ProfileCommand(ProfileStore profiles, HouseStore houses, AwardLog awards, Titles titles) {
         this.profiles = Objects.requireNonNull(profiles, "profiles");
         this.houses = Objects.requireNonNull(houses, "houses");
         this.awards = Objects.requireNonNull(awards, "awards");
+        this.titles = Objects.requireNonNull(titles, "titles");
     }
 
     @Override
@@ -136,7 +139,9 @@ public final class ProfileCommand implements SlashCommand {
      * them separately would read the whole award log five times to draw one profile.
      */
     private net.dv8tion.jda.api.entities.MessageEmbed render(User subject) {
-        Profile profile = profiles.get(subject.getId());
+        // Pruned as it is drawn, so a title lost with a house or a correction stops being worn
+        // without anything having to go and find every profile that was wearing it.
+        Profile profile = titles.pruned(profiles.get(subject.getId()));
         Map<Virtue, Integer> scores = awards.scores(subject.getId());
 
         Map<Optional<Virtue>, Map<String, Integer>> positions = new HashMap<>();

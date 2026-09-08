@@ -50,6 +50,18 @@ public final class ProfileStore {
     }
 
     /**
+     * Every profile that has ever been edited.
+     *
+     * <p>Only edited ones exist, so this is not everybody in the guild. That is the right set for
+     * the things that ask: a roster of who holds what has no use for a Bard who has never written
+     * anything down.
+     */
+    public synchronized java.util.List<Profile> all() {
+        load();
+        return java.util.List.copyOf(byUser.values());
+    }
+
+    /**
      * Applies a change and persists it.
      *
      * <p>Every mutation goes through here so that no caller can update the map and forget to write,

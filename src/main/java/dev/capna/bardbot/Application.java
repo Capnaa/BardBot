@@ -8,7 +8,9 @@ import dev.capna.bardbot.discord.Tribunal;
 import dev.capna.bardbot.discord.commands.AwardCommand;
 import dev.capna.bardbot.discord.commands.AwardVirtueCommand;
 import dev.capna.bardbot.discord.commands.ProfileCommand;
+import dev.capna.bardbot.discord.commands.TitleCommand;
 import dev.capna.bardbot.discord.commands.VirtueCommand;
+import dev.capna.bardbot.titles.Titles;
 import dev.capna.bardbot.virtue.Awarding;
 import dev.capna.bardbot.virtue.Unlocks;
 import dev.capna.bardbot.ops.Feature;
@@ -77,14 +79,16 @@ public final class Application implements AutoCloseable {
                     return thread;
                 });
         Tribunal tribunal = new Tribunal(config.discord().tribunalRoleIds());
+        Titles titleHoldings = new Titles(profiles, houses, awards, catalogue);
         Awarding awarding = new Awarding(awards, houses, catalogue);
         Unlocks unlockAnnouncer = new Unlocks(settings);
 
         this.registry = new CommandRegistry(settings)
-                .add(new ProfileCommand(profiles, houses, awards))
+                .add(new ProfileCommand(profiles, houses, awards, titleHoldings))
                 .add(new AwardCommand(tribunal, awarding, unlockAnnouncer, profiles, settings))
                 .add(new AwardVirtueCommand(tribunal, awarding, unlockAnnouncer, profiles))
-                .add(new VirtueCommand(awards, catalogue, profiles, config.renown().zone()));
+                .add(new VirtueCommand(awards, catalogue, profiles, config.renown().zone()))
+                .add(new TitleCommand(titleHoldings, profiles));
     }
 
     public void start() throws InterruptedException {
