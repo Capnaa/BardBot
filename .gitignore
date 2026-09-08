@@ -1,0 +1,43 @@
+### Secrets (never commit these) ###
+.env
+*.env
+!.env.example
+discord_token.txt
+*_token.txt
+config.properties
+!config.properties.example
+*.pem
+*.key
+credentials.json
+
+### Runtime data ###
+# Written by the bot at runtime; contains live member data.
+data/
+profiles.json
+houses.json
+titles.json
+awards.json
+renown.json
+settings.json
+
+### Build ###
+target/
+build/
+
+### Editors ###
+.idea/
+*.iml
+*.iws
+*.ipr
+.vscode/
+.settings/
+.classpath
+.project
+
+### OS ###
+.DS_Store
+Thumbs.db
+
+### Design notes ###
+# The working spec. Kept locally, deliberately not published.
+SPEC.md

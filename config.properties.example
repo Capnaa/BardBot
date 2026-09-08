@@ -1,0 +1,41 @@
+# Copy to config.properties and fill in. That file is gitignored; keep it that way.
+# Secrets do NOT belong here. The bot token comes from the environment (see .env.example).
+# Every value below is validated at startup, and every problem is reported at once.
+
+### Discord ###
+# The Bardonia guild. Commands are registered here.
+discord.guild.id=YOUR_GUILD_ID
+# Who may award virtue, create houses, appoint heads and grant government titles.
+# One or more role IDs, separated by commas. Required: with nobody privileged, half the bot
+# is unreachable.
+discord.roles.tribunal=YOUR_TRIBUNAL_ROLE_ID
+# Where the bot announces that a Bard has crossed a virtue goal. Blank announces nowhere.
+discord.channel.announcements=
+# Where the monthly renown standings are posted. This channel should be readable by the
+# tribunal only; that is enforced by Discord's own permissions on it, not by the bot.
+discord.channel.renown=
+# Channel the bot mirrors its warnings and errors to. Blank disables mirroring.
+discord.channel.console=
+# Development only. When set, commands register to this guild instead of globally, so they
+# appear instantly rather than taking up to an hour. Leave blank in production.
+discord.dev.guild.id=
+
+### Paths ###
+paths.data.dir=data
+
+### Monthly renown cycle ###
+# On the first of the month, at this time, the standings are posted and the month rolls over.
+renown.roll.at=00:05
+# The zone that time is in. It also decides where a month begins, so set it to whatever the
+# guild considers its own time rather than the bot host's.
+renown.roll.zone=America/New_York
+
+### Feature toggles (startup defaults; changeable at runtime by the tribunal) ###
+features.profiles.enabled=true
+features.virtue.enabled=true
+features.houses.enabled=true
+features.titles.enabled=true
+
+### Limits ###
+max.concurrent.operations=3
+command.cooldown.seconds=3
