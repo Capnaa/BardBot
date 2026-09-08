@@ -62,4 +62,44 @@ public record House(String id,
     public Set<String> titlesGrantedTo(String userId) {
         return nobleGrants.getOrDefault(userId, Set.of());
     }
+
+    /**
+     * Everyone in the house, heads first.
+     *
+     * <p>Heads are members, so every count and every roster reads them together. Keeping that in
+     * one place stops a head from being missing from their own house's membership.
+     */
+    public List<String> everyone() {
+        List<String> all = new java.util.ArrayList<>(headIds);
+        memberIds.stream().filter(id -> !headIds.contains(id)).forEach(all::add);
+        return List.copyOf(all);
+    }
+
+    /**
+     * A copy with some fields replaced.
+     *
+     * <p>A record with ten components is unpleasant to rebuild by hand, and every mutation in the
+     * store rebuilds one. Doing it here once means a new field cannot be forgotten in nine
+     * different places.
+     */
+    public House with(Optional<String> newName,
+                      Optional<String> newMotto,
+                      Optional<String> newDescription,
+                      Optional<String> newCrest,
+                      List<String> newHeads,
+                      Set<String> newMembers,
+                      Set<String> newInvited,
+                      List<String> newTitles,
+                      Map<String, Set<String>> newGrants) {
+        return new House(id,
+                newName.orElse(name),
+                newMotto.or(() -> motto),
+                newDescription.or(() -> description),
+                newCrest.or(() -> crestUrl),
+                newHeads == null ? headIds : newHeads,
+                newMembers == null ? memberIds : newMembers,
+                newInvited == null ? invitedIds : newInvited,
+                newTitles == null ? nobleTitles : newTitles,
+                newGrants == null ? nobleGrants : newGrants);
+    }
 }

@@ -195,6 +195,233 @@ public final class HouseStore {
         return update(house.id(), current -> withHeads(current, heads));
     }
 
+    /**
+     * Invites a Bard.
+     *
+     * <p>An invitation rather than an assignment. Being put into a house without agreeing is the
+     * kind of thing that starts an argument the bot cannot settle, and the head loses nothing by
+     * asking.
+     *
+     * @throws HouseRejected if they already belong somewhere, or have already been asked
+     */
+    public synchronized House invite(String id, String userId) throws IOException, HouseRejected {
+        load();
+        House house = require(id);
+        if (house.holds(userId)) {
+            throw new HouseRejected("They are already in " + house.name() + ".");
+        }
+        Optional<House> elsewhere = holding(userId);
+        if (elsewhere.isPresent()) {
+            throw new HouseRejected("They are already in " + elsewhere.get().name()
+                    + ". They have to leave it before they can join another house.");
+        }
+        if (house.invitedIds().contains(userId)) {
+            throw new HouseRejected("They have already been invited to " + house.name() + ".");
+        }
+        Set<String> invited = new LinkedHashSet<>(house.invitedIds());
+        invited.add(userId);
+        return update(house.id(), current ->
+                current.with(Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(),
+                        null, null, invited, null, null));
+    }
+
+    /** Every house that has asked for a Bard, so an invitation cannot be lost. */
+    public synchronized List<House> invitationsFor(String userId) {
+        load();
+        return byId.values().stream()
+                .filter(house -> house.invitedIds().contains(userId))
+                .toList();
+    }
+
+    /**
+     * Takes up an invitation.
+     *
+     * <p>Every other invitation is dropped at the same time. A Bard is in at most one house, so an
+     * invitation they can no longer accept is only there to be clicked and refused later.
+     *
+     * @throws HouseRejected if they were not invited, or joined somewhere in the meantime
+     */
+    public synchronized House accept(String id, String userId) throws IOException, HouseRejected {
+        load();
+        House house = require(id);
+        if (!house.invitedIds().contains(userId)) {
+            throw new HouseRejected(house.name() + " has not invited you.");
+        }
+        Optional<House> elsewhere = holding(userId);
+        if (elsewhere.isPresent()) {
+            throw new HouseRejected("You are already in " + elsewhere.get().name() + ".");
+        }
+
+        for (House other : List.copyOf(byId.values())) {
+            if (!other.id().equals(house.id()) && other.invitedIds().contains(userId)) {
+                Set<String> withdrawn = new LinkedHashSet<>(other.invitedIds());
+                withdrawn.remove(userId);
+                update(other.id(), current ->
+                        current.with(Optional.empty(), Optional.empty(), Optional.empty(),
+                                Optional.empty(), null, null, withdrawn, null, null));
+            }
+        }
+
+        Set<String> members = new LinkedHashSet<>(house.memberIds());
+        members.add(userId);
+        Set<String> invited = new LinkedHashSet<>(house.invitedIds());
+        invited.remove(userId);
+        return update(house.id(), current ->
+                current.with(Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(),
+                        null, members, invited, null, null));
+    }
+
+    /** Turns an invitation down. Silent about invitations that were never made. */
+    public synchronized void decline(String id, String userId) throws IOException {
+        load();
+        Optional<House> house = byId(id);
+        if (house.isEmpty() || !house.get().invitedIds().contains(userId)) {
+            return;
+        }
+        Set<String> invited = new LinkedHashSet<>(house.get().invitedIds());
+        invited.remove(userId);
+        update(house.get().id(), current ->
+                current.with(Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(),
+                        null, null, invited, null, null));
+    }
+
+    /**
+     * Leaves a house, giving up its titles.
+     *
+     * <p>The grants go with the membership rather than being kept in case they return: a title is
+     * the house's, and an ex-member wearing its rank is exactly what the grant was for.
+     *
+     * @throws HouseRejected if they are its only head, since that would leave it leaderless
+     */
+    public synchronized Optional<House> leave(String userId) throws IOException, HouseRejected {
+        load();
+        Optional<House> house = holding(userId);
+        if (house.isEmpty()) {
+            return Optional.empty();
+        }
+        House held = house.get();
+        if (held.isHead(userId) && held.headIds().size() == 1) {
+            throw new HouseRejected("You are the only head of " + held.name()
+                    + ". Appoint another before you leave, or ask the tribunal to dissolve it.");
+        }
+
+        List<String> heads = new ArrayList<>(held.headIds());
+        heads.remove(userId);
+        Set<String> members = new LinkedHashSet<>(held.memberIds());
+        members.remove(userId);
+        Map<String, Set<String>> grants = new LinkedHashMap<>(held.nobleGrants());
+        grants.remove(userId);
+
+        return Optional.of(update(held.id(), current ->
+                current.with(Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(),
+                        heads, members, null, null, grants)));
+    }
+
+    /** Removes a member, used when a head turns somebody out. */
+    public synchronized House expel(String id, String userId) throws IOException, HouseRejected {
+        load();
+        House house = require(id);
+        if (house.isHead(userId)) {
+            throw new HouseRejected("Stand them down as head first.");
+        }
+        if (!house.holds(userId)) {
+            throw new HouseRejected("They are not in " + house.name() + ".");
+        }
+        Set<String> members = new LinkedHashSet<>(house.memberIds());
+        members.remove(userId);
+        Map<String, Set<String>> grants = new LinkedHashMap<>(house.nobleGrants());
+        grants.remove(userId);
+        return update(house.id(), current ->
+                current.with(Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(),
+                        null, members, null, null, grants));
+    }
+
+    /** The head's own description of the house. Absent values are left as they were. */
+    public synchronized House edit(String id, Optional<String> motto, Optional<String> description,
+                                   Optional<String> crestUrl) throws IOException {
+        load();
+        return update(id, current ->
+                current.with(Optional.empty(), motto, description, crestUrl,
+                        null, null, null, null, null));
+    }
+
+    /** Adds a title the house may grant. */
+    public synchronized House addTitle(String id, String title) throws IOException, HouseRejected {
+        load();
+        House house = require(id);
+        String trimmed = title.strip();
+        if (trimmed.isEmpty() || trimmed.length() > House.MAX_TITLE) {
+            throw new HouseRejected("A title has to be between 1 and "
+                    + House.MAX_TITLE + " characters.");
+        }
+        if (house.nobleTitles().stream().anyMatch(existing -> existing.equalsIgnoreCase(trimmed))) {
+            throw new HouseRejected(house.name() + " already has that title.");
+        }
+        List<String> titles = new ArrayList<>(house.nobleTitles());
+        titles.add(trimmed);
+        return update(house.id(), current ->
+                current.with(Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(),
+                        null, null, null, titles, null));
+    }
+
+    /**
+     * Retires a title.
+     *
+     * <p>The grants are left alone. A title the house no longer defines stops being offered to
+     * anybody wearing it, so there is nothing to clean up and nothing that could be missed.
+     */
+    public synchronized House removeTitle(String id, String title) throws IOException {
+        load();
+        House house = require(id);
+        List<String> titles = house.nobleTitles().stream()
+                .filter(existing -> !existing.equalsIgnoreCase(title))
+                .toList();
+        return update(house.id(), current ->
+                current.with(Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(),
+                        null, null, null, titles, null));
+    }
+
+    /** Lets one member wear one of the house's titles. */
+    public synchronized House grantTitle(String id, String userId, String title)
+            throws IOException, HouseRejected {
+        load();
+        House house = require(id);
+        if (!house.holds(userId)) {
+            throw new HouseRejected("They are not in " + house.name() + ".");
+        }
+        Optional<String> defined = house.nobleTitles().stream()
+                .filter(existing -> existing.equalsIgnoreCase(title))
+                .findFirst();
+        if (defined.isEmpty()) {
+            throw new HouseRejected(house.name() + " has no title by that name.");
+        }
+        Map<String, Set<String>> grants = new LinkedHashMap<>(house.nobleGrants());
+        Set<String> held = new LinkedHashSet<>(grants.getOrDefault(userId, Set.of()));
+        held.add(defined.get());
+        grants.put(userId, held);
+        return update(house.id(), current ->
+                current.with(Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(),
+                        null, null, null, null, grants));
+    }
+
+    /** Takes a granted title back. */
+    public synchronized House revokeTitle(String id, String userId, String title)
+            throws IOException {
+        load();
+        House house = require(id);
+        Map<String, Set<String>> grants = new LinkedHashMap<>(house.nobleGrants());
+        Set<String> held = new LinkedHashSet<>(grants.getOrDefault(userId, Set.of()));
+        held.removeIf(existing -> existing.equalsIgnoreCase(title));
+        if (held.isEmpty()) {
+            grants.remove(userId);
+        } else {
+            grants.put(userId, held);
+        }
+        return update(house.id(), current ->
+                current.with(Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(),
+                        null, null, null, null, grants));
+    }
+
     private House require(String id) {
         return byId(id).orElseThrow(() -> new IllegalArgumentException("No house with id " + id));
     }
