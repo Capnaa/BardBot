@@ -9,6 +9,7 @@ import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -55,6 +56,55 @@ public final class CatalogueStore {
     /** Re-reads the file, for when it has been edited by hand and should take effect now. */
     public synchronized void reload() {
         current = load(file);
+    }
+
+    /**
+     * Adds a goal, or moves the title on one that already exists at that threshold.
+     *
+     * <p>Replacing rather than refusing, because "40 Honor is now called something else" is a
+     * normal thing for a government to decide and should not require deleting the tier first.
+     */
+    public synchronized void addGoal(Goal goal) throws IOException {
+        List<Goal> goals = new ArrayList<>(current.goals().stream()
+                .filter(existing -> !sameTier(existing, goal))
+                .toList());
+        goals.add(goal);
+        goals.sort(Comparator.comparingInt(Goal::threshold));
+        persist(new Catalogue(goals, current.governmentTitles()));
+    }
+
+    /** @return false when there was no goal at that threshold, so the caller can say so */
+    public synchronized boolean removeGoal(Optional<Virtue> virtue, int threshold) throws IOException {
+        List<Goal> goals = current.goals().stream()
+                .filter(goal -> !(goal.virtue().equals(virtue) && goal.threshold() == threshold))
+                .toList();
+        if (goals.size() == current.goals().size()) {
+            return false;
+        }
+        persist(new Catalogue(goals, current.governmentTitles()));
+        return true;
+    }
+
+    /** Two goals are the same tier when they measure the same thing at the same score. */
+    private static boolean sameTier(Goal one, Goal other) {
+        return one.virtue().equals(other.virtue()) && one.threshold() == other.threshold();
+    }
+
+    private void persist(Catalogue updated) throws IOException {
+        JSONArray goals = new JSONArray();
+        for (Goal goal : updated.goals()) {
+            JSONObject json = new JSONObject()
+                    .put("virtue", goal.virtue().map(Virtue::key).orElse("total"))
+                    .put("threshold", goal.threshold());
+            goal.title().ifPresent(title -> json.put("title", title));
+            goal.note().ifPresent(note -> json.put("note", note));
+            goals.put(json);
+        }
+        AtomicFiles.writeString(file, new JSONObject()
+                .put("goals", goals)
+                .put("governmentTitles", new JSONArray(updated.governmentTitles()))
+                .toString(2));
+        current = updated;
     }
 
     private static Catalogue load(Path file) {

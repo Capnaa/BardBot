@@ -5,6 +5,7 @@ import dev.capna.bardbot.config.Token;
 import dev.capna.bardbot.discord.BotListener;
 import dev.capna.bardbot.discord.CommandRegistry;
 import dev.capna.bardbot.discord.Tribunal;
+import dev.capna.bardbot.discord.commands.AdminCommand;
 import dev.capna.bardbot.discord.commands.AwardCommand;
 import dev.capna.bardbot.discord.commands.AwardVirtueCommand;
 import dev.capna.bardbot.discord.commands.ProfileCommand;
@@ -88,7 +89,8 @@ public final class Application implements AutoCloseable {
                 .add(new AwardCommand(tribunal, awarding, unlockAnnouncer, profiles, settings))
                 .add(new AwardVirtueCommand(tribunal, awarding, unlockAnnouncer, profiles))
                 .add(new VirtueCommand(awards, catalogue, profiles, config.renown().zone()))
-                .add(new TitleCommand(titleHoldings, profiles));
+                .add(new TitleCommand(titleHoldings, profiles))
+                .add(new AdminCommand(tribunal, settings, catalogue, houses, profiles));
     }
 
     public void start() throws InterruptedException {
