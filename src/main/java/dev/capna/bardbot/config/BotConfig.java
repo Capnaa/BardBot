@@ -34,17 +34,12 @@ public record BotConfig(Discord discord,
      *                            channel's own permissions, not by anything the bot enforces, so
      *                            it must be a channel the rest of the guild cannot read.
      * @param consoleChannelId    where warnings and errors are mirrored, absent to mirror nowhere
-     * @param devGuildId          when present, commands register there instead of globally. Guild
-     *                            commands appear instantly where global ones can take an hour,
-     *                            which is the difference between a usable development loop and an
-     *                            unusable one. Unset in production.
      */
     public record Discord(String guildId,
                           List<String> tribunalRoleIds,
                           Optional<String> announcementChannelId,
                           Optional<String> renownChannelId,
-                          Optional<String> consoleChannelId,
-                          Optional<String> devGuildId) {
+                          Optional<String> consoleChannelId) {
     }
 
     /** @param dataDir durable state the bot owns: profiles, houses, titles, awards, settings */

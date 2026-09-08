@@ -16,9 +16,6 @@ discord.channel.announcements=
 discord.channel.renown=
 # Channel the bot mirrors its warnings and errors to. Blank disables mirroring.
 discord.channel.console=
-# Development only. When set, commands register to this guild instead of globally, so they
-# appear instantly rather than taking up to an hour. Leave blank in production.
-discord.dev.guild.id=
 
 ### Paths ###
 paths.data.dir=data

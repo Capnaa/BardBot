@@ -56,8 +56,7 @@ public final class ConfigLoader {
                         ids("discord.roles.tribunal"),
                         optionalId("discord.channel.announcements"),
                         optionalId("discord.channel.renown"),
-                        optionalId("discord.channel.console"),
-                        optionalId("discord.dev.guild.id")),
+                        optionalId("discord.channel.console")),
                 new BotConfig.Paths(
                         path("paths.data.dir", "data")),
                 new BotConfig.Renown(

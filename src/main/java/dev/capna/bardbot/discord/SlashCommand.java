@@ -2,6 +2,7 @@ package dev.capna.bardbot.discord;
 
 import dev.capna.bardbot.ops.Feature;
 import net.dv8tion.jda.api.events.interaction.command.CommandAutoCompleteInteractionEvent;
+import net.dv8tion.jda.api.events.interaction.command.MessageContextInteractionEvent;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent;
 import net.dv8tion.jda.api.events.interaction.component.StringSelectInteractionEvent;
@@ -42,6 +43,18 @@ public interface SlashCommand {
      * within three seconds and the user sees a failure whatever the bot does afterwards.
      */
     void handle(SlashCommandInteractionEvent event) throws Exception;
+
+    /**
+     * Runs the command when it was invoked from a message's right-click menu rather than typed.
+     *
+     * <p>Only one command is reached this way. Awarding virtue is meant to be done by pointing at
+     * the message that earned it, and a slash command cannot be used as a reply to a message, so
+     * that gesture is a context menu entry. It registers, routes and is toggled exactly like the
+     * rest, which is why it lives on this interface rather than in plumbing of its own.
+     */
+    default void messageContext(MessageContextInteractionEvent event) throws Exception {
+        Replies.problem(event, "That is not something this command does.");
+    }
 
     /**
      * Offers suggestions as the user types.
