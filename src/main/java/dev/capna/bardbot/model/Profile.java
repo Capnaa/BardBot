@@ -10,8 +10,9 @@ import java.util.Optional;
  * sign up before they can be awarded anything. Every field is optional: a profile that has never
  * been edited is still a real profile with real virtue on it.
  *
- * <p>Virtue is deliberately not here. Scores are a sum over the award log, so a profile cannot
- * carry a number that disagrees with the awards that produced it.
+ * <p>Neither virtue nor the family tree is here. Virtue is a sum over the award log, and the family
+ * tree is the Bard's house and who else is in it, so both are derived where they are shown rather
+ * than stored somewhere they could fall out of date.
  *
  * @param userId       the Discord user this belongs to, and the only field that is never blank
  * @param name         the character's name, which is not the Discord display name
@@ -27,7 +28,6 @@ public record Profile(String userId,
                       Optional<String> gender,
                       Optional<String> age,
                       Optional<String> description,
-                      Optional<String> familyTree,
                       Optional<String> imageUrl,
                       Optional<String> wikiUrl,
                       Map<TitleSlot, String> equipped,
@@ -44,7 +44,6 @@ public record Profile(String userId,
     public static final int MAX_GENDER = 20;
     public static final int MAX_AGE = 12;
     public static final int MAX_DESCRIPTION = 900;
-    public static final int MAX_FAMILY_TREE = 400;
     public static final int MAX_URL = 300;
 
     public Profile {
@@ -56,7 +55,7 @@ public record Profile(String userId,
     public static Profile empty(String userId) {
         return new Profile(userId,
                 Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(),
-                Optional.empty(), Optional.empty(), Optional.empty(),
+                Optional.empty(), Optional.empty(),
                 Map.of(), java.util.Set.of());
     }
 

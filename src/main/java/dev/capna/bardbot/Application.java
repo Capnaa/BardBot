@@ -4,6 +4,7 @@ import dev.capna.bardbot.config.BotConfig;
 import dev.capna.bardbot.config.Token;
 import dev.capna.bardbot.discord.BotListener;
 import dev.capna.bardbot.discord.CommandRegistry;
+import dev.capna.bardbot.discord.commands.ProfileCommand;
 import dev.capna.bardbot.ops.Feature;
 import dev.capna.bardbot.ops.Settings;
 import dev.capna.bardbot.ops.SettingsStore;
@@ -69,7 +70,8 @@ public final class Application implements AutoCloseable {
                     thread.setDaemon(true);
                     return thread;
                 });
-        this.registry = new CommandRegistry(settings);
+        this.registry = new CommandRegistry(settings)
+                .add(new ProfileCommand(profiles, houses, awards));
     }
 
     public void start() throws InterruptedException {

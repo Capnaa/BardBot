@@ -80,7 +80,6 @@ public final class ProfileStore {
             profile.gender().ifPresent(v -> json.put("gender", v));
             profile.age().ifPresent(v -> json.put("age", v));
             profile.description().ifPresent(v -> json.put("description", v));
-            profile.familyTree().ifPresent(v -> json.put("familyTree", v));
             profile.imageUrl().ifPresent(v -> json.put("image", v));
             profile.wikiUrl().ifPresent(v -> json.put("wiki", v));
 
@@ -129,7 +128,6 @@ public final class ProfileStore {
                         optional(json, "gender"),
                         optional(json, "age"),
                         optional(json, "description"),
-                        optional(json, "familyTree"),
                         optional(json, "image"),
                         optional(json, "wiki"),
                         equipped,
