@@ -6,7 +6,7 @@ import dev.capna.bardbot.model.TitleSlot;
 /**
  * A Bard's name with their titles worked into it.
  *
- * <p>The three titles read as one line, {@code Lord Prophet Azurov the Veteran of The Tribunal} 
+ * <p>The three titles read as one line, {@code Lord Prophet Capna the Veteran of The Tribunal} 
  * and the words between them belong to the titles rather than to the name. "the" appears only with
  * a virtue title and "of" only with a government one, so a Bard holding none, one, two or all three
  * reads correctly without any of them being a special case.

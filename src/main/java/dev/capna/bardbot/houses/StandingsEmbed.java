@@ -1,5 +1,6 @@
 package dev.capna.bardbot.houses;
 
+import dev.capna.bardbot.discord.Ansi;
 import dev.capna.bardbot.discord.Names;
 import dev.capna.bardbot.model.Standings;
 import net.dv8tion.jda.api.EmbedBuilder;
@@ -23,7 +24,8 @@ public final class StandingsEmbed {
     private StandingsEmbed() {
     }
 
-    public static MessageEmbed of(Standings standings) {
+    public static MessageEmbed of(Standings standings,
+                                  java.util.function.Function<String, dev.capna.bardbot.model.HouseColor> colors) {
         EmbedBuilder embed = new EmbedBuilder()
                 .setTitle("Renown, " + MONTH.format(standings.month()));
 
@@ -32,14 +34,17 @@ public final class StandingsEmbed {
             return embed.build();
         }
 
-        StringBuilder rows = new StringBuilder();
+        StringBuilder rows = new StringBuilder(Ansi.FENCE);
         for (int i = 0; i < standings.places().size(); i++) {
             Standings.Place place = standings.places().get(i);
-            rows.append(i + 1).append(". ")
-                    .append(Names.escaped(place.houseName()))
-                    .append(", ").append(place.renown())
+            rows.append(Ansi.white(String.format("%2d.", i + 1)))
+                    .append(" ")
+                    .append(colors.apply(place.houseId())
+                            .paint(String.format("%-24s", Ansi.inFence(place.houseName()))))
+                    .append(Ansi.number(String.valueOf(place.renown())))
                     .append('\n');
         }
+        rows.append("```");
         embed.setDescription(rows.toString());
 
         List<Standings.Place> winners = standings.winners();

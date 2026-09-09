@@ -40,13 +40,16 @@ public final class LiveBoards {
     private final AwardLog awards;
     private final ProfileStore profiles;
     private final Renown renown;
+    private final dev.capna.bardbot.store.HouseStore houses;
     private final ScheduledExecutorService schedule;
 
     /** Whether a refresh is already coming, so a burst of awards only ever books one. */
     private final AtomicBoolean pending = new AtomicBoolean();
 
     public LiveBoards(SettingsStore settings, AwardLog awards, ProfileStore profiles,
-                      Renown renown, ScheduledExecutorService schedule) {
+                      Renown renown, dev.capna.bardbot.store.HouseStore houses,
+                      ScheduledExecutorService schedule) {
+        this.houses = Objects.requireNonNull(houses, "houses");
         this.settings = Objects.requireNonNull(settings, "settings");
         this.awards = Objects.requireNonNull(awards, "awards");
         this.profiles = Objects.requireNonNull(profiles, "profiles");
@@ -80,7 +83,7 @@ public final class LiveBoards {
                     awards.standings(Optional.empty()), profiles, 1, "");
             case HOUSE -> HouseEmbed.leaderboard(kind.display(), renown.thisMonthTable().stream()
                     .limit(LeaderboardEmbed.PAGE_SIZE)
-                    .toList());
+                    .toList(), houses::colorOf);
         };
     }
 

@@ -89,6 +89,9 @@ public final class HouseCommand implements SlashCommand {
                         new SubcommandData("decline", "Turn down an invitation")
                                 .addOption(OptionType.STRING, "name", "Which house",
                                         true, true),
+                        new SubcommandData("color", "Change your house's color")
+                                .addOptions(AdminCommand.colorOption()
+                                        .setRequired(true)),
                         new SubcommandData("leave", "Leave your house"),
                         new SubcommandData("expel", "Turn a member out of your house")
                                 .addOption(OptionType.USER, "bard", "Who", true))
@@ -126,6 +129,7 @@ public final class HouseCommand implements SlashCommand {
                 case "invite" -> invite(event);
                 case "accept" -> accept(event);
                 case "decline" -> decline(event);
+                case "color" -> color(event);
                 case "leave" -> leave(event);
                 case "expel" -> expel(event);
                 default -> Replies.problem(event, "That is not something this command does.");
@@ -160,7 +164,7 @@ public final class HouseCommand implements SlashCommand {
         }
         StringBuilder rows = new StringBuilder();
         for (House house : all) {
-            rows.append(Names.escaped(house.name()))
+            rows.append(house.color().paint(dev.capna.bardbot.discord.Ansi.inFence(house.name())))
                     .append(": ").append(renown.allTimeFor(house.id())).append(" renown, ")
                     .append(house.everyone().size())
                     .append(house.everyone().size() == 1 ? " member" : " members")
@@ -168,7 +172,7 @@ public final class HouseCommand implements SlashCommand {
         }
         event.replyEmbeds(new net.dv8tion.jda.api.EmbedBuilder()
                 .setTitle("The noble houses")
-                .setDescription(rows.toString())
+                .setDescription(dev.capna.bardbot.discord.Ansi.FENCE + rows + "```")
                 .build()).queue();
     }
 
@@ -176,7 +180,8 @@ public final class HouseCommand implements SlashCommand {
         boolean allTime = event.getOption("all", false, OptionMapping::getAsBoolean);
         event.replyEmbeds(HouseEmbed.leaderboard(
                 allTime ? "Renown, all time" : "Renown this month",
-                allTime ? renown.allTimeTable() : renown.thisMonthTable())).queue();
+                allTime ? renown.allTimeTable() : renown.thisMonthTable(),
+                houses::colorOf)).queue();
     }
 
     /**
@@ -276,6 +281,18 @@ public final class HouseCommand implements SlashCommand {
             houses.decline(house.get().id(), event.getUser().getId());
         }
         Replies.quietly(event, "Invitation declined.");
+    }
+
+    private void color(SlashCommandInteractionEvent event) throws Exception {
+        Optional<House> house = headOf(event);
+        if (house.isEmpty()) {
+            return;
+        }
+        dev.capna.bardbot.model.HouseColor chosen = dev.capna.bardbot.model.HouseColor
+                .byKey(event.getOption("color", "", OptionMapping::getAsString)).orElseThrow();
+        houses.setColor(house.get().id(), chosen);
+        Replies.quietly(event, house.get().name() + " is now written in "
+                + chosen.display().toLowerCase(java.util.Locale.ROOT) + ".");
     }
 
     private void leave(SlashCommandInteractionEvent event) throws Exception {

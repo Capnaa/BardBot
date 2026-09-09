@@ -1,6 +1,7 @@
 package dev.capna.bardbot.store;
 
 import dev.capna.bardbot.model.House;
+import dev.capna.bardbot.model.HouseColor;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -83,6 +84,12 @@ public final class HouseStore {
      *                       reports them to whoever asked rather than logging them as faults.
      */
     public synchronized House add(String name, String headId) throws IOException, HouseRejected {
+        return add(name, headId, HouseColor.fallback());
+    }
+
+    /** @param color how the house is written wherever it is named */
+    public synchronized House add(String name, String headId, HouseColor color)
+            throws IOException, HouseRejected {
         load();
         String trimmed = name.strip();
         if (trimmed.isEmpty() || trimmed.length() > House.MAX_NAME) {
@@ -110,7 +117,7 @@ public final class HouseStore {
         }
 
         House house = new House(id, trimmed, Optional.empty(), Optional.empty(), Optional.empty(),
-                List.of(headId), Set.of(), Set.of(), List.of(), Map.of());
+                color, List.of(headId), Set.of(), Set.of(), List.of(), Map.of());
         byId.put(id, house);
         persistOrRollBack(id, null);
         return house;
@@ -336,6 +343,17 @@ public final class HouseStore {
                         null, members, null, null, grants));
     }
 
+    /** The color of a house by id, falling back for one that has since been dissolved. */
+    public HouseColor colorOf(String id) {
+        return byId(id).map(House::color).orElse(HouseColor.fallback());
+    }
+
+    /** Changes the color the house is written in. */
+    public synchronized House setColor(String id, HouseColor color) throws IOException {
+        load();
+        return update(id, current -> current.withColor(color));
+    }
+
     /** The head's own description of the house. Absent values are left as they were. */
     public synchronized House edit(String id, Optional<String> motto, Optional<String> description,
                                    Optional<String> crestUrl) throws IOException {
@@ -428,7 +446,7 @@ public final class HouseStore {
 
     private static House withHeads(House house, List<String> heads) {
         return new House(house.id(), house.name(), house.motto(), house.description(),
-                house.crestUrl(), heads, house.memberIds(), house.invitedIds(),
+                house.crestUrl(), house.color(), heads, house.memberIds(), house.invitedIds(),
                 house.nobleTitles(), house.nobleGrants());
     }
 
@@ -466,7 +484,8 @@ public final class HouseStore {
                     .put("heads", new JSONArray(house.headIds()))
                     .put("members", new JSONArray(house.memberIds()))
                     .put("invited", new JSONArray(house.invitedIds()))
-                    .put("nobleTitles", new JSONArray(house.nobleTitles()));
+                    .put("nobleTitles", new JSONArray(house.nobleTitles()))
+                    .put("color", house.color().key());
             house.motto().ifPresent(v -> json.put("motto", v));
             house.description().ifPresent(v -> json.put("description", v));
             house.crestUrl().ifPresent(v -> json.put("crest", v));
@@ -505,6 +524,8 @@ public final class HouseStore {
                         optional(json, "motto"),
                         optional(json, "description"),
                         optional(json, "crest"),
+                        HouseColor.byKey(json.optString("color", ""))
+                                .orElse(HouseColor.fallback()),
                         List.copyOf(strings(json.optJSONArray("heads"))),
                         strings(json.optJSONArray("members")),
                         strings(json.optJSONArray("invited")),

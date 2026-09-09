@@ -33,9 +33,13 @@ public final class AwardEmbed {
                         + CharacterName.of(profile, recipient.getEffectiveName()))
                 .setThumbnail(profile.imageUrl().orElse(recipient.getEffectiveAvatarUrl()))
                 .setDescription(description)
-                .addField("Change", "```\n"
-                        + row(result.virtue().display(), result.scoreBefore(), result.scoreAfter())
-                        + row("Total", result.totalBefore(), result.totalAfter())
+                // The stripe carries which virtue this was, so a channel of awards is readable
+                // while scrolling past it.
+                .setColor(Ansi.rgb(result.virtue()))
+                .addField("Change", Ansi.FENCE
+                        + row(Ansi.virtue(result.virtue(), pad(result.virtue().display())),
+                                result.scoreBefore(), result.scoreAfter())
+                        + row(Ansi.white(pad("Total")), result.totalBefore(), result.totalAfter())
                         + "```", false)
                 .setFooter("Awarded by @" + granter.getName(), null)
                 .build();
@@ -46,7 +50,13 @@ public final class AwardEmbed {
         return amount > 0 ? "+" + amount : String.valueOf(amount);
     }
 
+    /** Padded before coloring, for the same reason the profile pads before coloring. */
+    private static String pad(String label) {
+        return String.format("%-8s", label);
+    }
+
     private static String row(String label, int before, int after) {
-        return String.format("%-8s %5d → %d%n", label, before, after);
+        return label + " " + Ansi.number(String.format("%5d", before))
+                + " to " + Ansi.number(String.valueOf(after)) + "\n";
     }
 }

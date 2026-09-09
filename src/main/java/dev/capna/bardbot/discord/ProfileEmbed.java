@@ -51,6 +51,11 @@ public final class ProfileEmbed {
         EmbedBuilder embed = new EmbedBuilder()
                 .setTitle(CharacterName.of(profile, user.getEffectiveName()))
                 .setThumbnail(profile.imageUrl().orElse(user.getEffectiveAvatarUrl()))
+                // A Bard's sheet is drawn in their house's color wherever it appears, and grey
+                // when they belong to no house, which is the same grey a house with no color set
+                // is given.
+                .setColor(house.map(held -> held.color().rgb())
+                        .orElse(dev.capna.bardbot.model.HouseColor.fallback().rgb()))
                 .setFooter("@" + user.getName(), null);
 
         embed.addField("Virtue", virtues(profile.userId(), scores, positions), false);
@@ -86,22 +91,32 @@ public final class ProfileEmbed {
     private static String virtues(String userId,
                                   Map<Virtue, Integer> scores,
                                   Map<Optional<Virtue>, Map<String, Integer>> positions) {
-        StringBuilder block = new StringBuilder("```\n");
+        StringBuilder block = new StringBuilder(Ansi.FENCE);
         int total = 0;
         for (Virtue virtue : Virtue.values()) {
             int score = scores.getOrDefault(virtue, 0);
             total += score;
-            block.append(row(virtue.display(), score,
+            block.append(row(Ansi.virtue(virtue, pad(virtue.display())), score,
                     Ranks.of(positions.getOrDefault(Optional.of(virtue), Map.of()), userId)));
         }
-        block.append(row("Total", total,
+        block.append(row(Ansi.white(pad("Total")), total,
                 Ranks.of(positions.getOrDefault(Optional.<Virtue>empty(), Map.of()), userId)));
         return block.append("```").toString();
     }
 
-    /** A rank of nothing is a dash. Last place among everyone on zero is not worth printing. */
+    /**
+     * Padded before it is colored.
+     *
+     * <p>An escape sequence counts toward a format width but occupies no space on screen, so
+     * padding an already colored string misaligns the column.
+     */
+    private static String pad(String label) {
+        return String.format("%-6s", label);
+    }
+
+    /** A rank of nothing is blank. Last place among everyone on zero is not worth printing. */
     private static String row(String label, int score, Optional<Integer> rank) {
-        return String.format("%-6s %5d   %s%n", label, score,
-                rank.map(place -> "#" + place).orElse(""));
+        return label + " " + Ansi.number(String.format("%5d", score)) + "   "
+                + rank.map(place -> "#" + place).orElse("") + "\n";
     }
 }

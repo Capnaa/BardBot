@@ -164,14 +164,19 @@ public final class VirtueCommand implements SlashCommand {
             any = true;
             int score = section.map(scores::get).orElse(total);
 
-            StringBuilder rows = new StringBuilder("```\n");
+            StringBuilder rows = new StringBuilder(dev.capna.bardbot.discord.Ansi.FENCE);
             for (Goal goal : goals) {
                 // A met goal is ticked rather than hidden, so the list reads as progress rather
                 // than as a set of things still to do.
-                rows.append(goal.metBy(score) ? "✓ " : "  ")
-                        .append(String.format("%5d  ", goal.threshold()))
-                        .append(goal.title().orElse(goal.note().orElse("")))
-                        .append('\n');
+                String label = goal.metBy(score) ? "\u2713 " : "  ";
+                String figure = dev.capna.bardbot.discord.Ansi.number(
+                        String.format("%5d", goal.threshold()));
+                String name = section
+                        .map(virtue -> dev.capna.bardbot.discord.Ansi.virtue(virtue,
+                                goal.title().orElse(goal.note().orElse(""))))
+                        .orElseGet(() -> dev.capna.bardbot.discord.Ansi.white(
+                                goal.title().orElse(goal.note().orElse(""))));
+                rows.append(label).append(figure).append("  ").append(name).append('\n');
             }
             rows.append("```");
 
@@ -195,15 +200,20 @@ public final class VirtueCommand implements SlashCommand {
             return embed.build();
         }
 
-        StringBuilder rows = new StringBuilder();
+        StringBuilder rows = new StringBuilder(dev.capna.bardbot.discord.Ansi.FENCE);
         for (Award award : history) {
-            rows.append(award.amount() > 0 ? "+" : "").append(award.amount())
-                    .append(' ').append(award.virtue().display())
-                    .append(", ").append(WHEN.format(award.at().atZone(zone)));
-            award.reason().ifPresent(reason ->
-                    rows.append("\n  ").append(Names.escaped(reason)));
+            String amount = (award.amount() > 0 ? "+" : "") + award.amount();
+            rows.append(dev.capna.bardbot.discord.Ansi.number(String.format("%6s", amount)))
+                    .append(" ")
+                    .append(dev.capna.bardbot.discord.Ansi.virtue(award.virtue(),
+                            String.format("%-6s", award.virtue().display())))
+                    .append("  ").append(WHEN.format(award.at().atZone(zone)));
+            // Reasons are player written, so they stay out of the colored columns and sit on
+            // their own line where a long one cannot push the dates out of line.
+            award.reason().ifPresent(reason -> rows.append("\n       ").append(dev.capna.bardbot.discord.Ansi.inFence(reason)));
             rows.append('\n');
         }
+        rows.append("```");
         embed.setDescription(rows.toString());
         embed.setFooter("The " + Math.min(history.size(), HISTORY_SHOWN) + " most recent", null);
         return embed.build();

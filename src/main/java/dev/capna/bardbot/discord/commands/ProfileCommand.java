@@ -158,13 +158,13 @@ public final class ProfileCommand implements SlashCommand {
         return Modal.create(IDENTITY_MODAL, "Your character")
                 .addComponents(
                         row("name", "Name", TextInputStyle.SHORT, Profile.MAX_NAME,
-                                profile.name(), "Azurov"),
+                                profile.name(), "Capna"),
                         row("gender", "Gender", TextInputStyle.SHORT, Profile.MAX_GENDER,
                                 profile.gender(), null),
                         row("age", "Age", TextInputStyle.SHORT, Profile.MAX_AGE,
                                 profile.age(), null),
                         row("image", "Character image link", TextInputStyle.SHORT, Profile.MAX_URL,
-                                profile.imageUrl(), "https://…/azurov.png"),
+                                profile.imageUrl(), "https://…/capna.png"),
                         row("wiki", "Wiki page link", TextInputStyle.SHORT, Profile.MAX_URL,
                                 profile.wikiUrl(), null))
                 .build();

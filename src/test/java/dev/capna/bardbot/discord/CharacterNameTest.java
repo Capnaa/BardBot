@@ -32,8 +32,8 @@ class CharacterNameTest {
 
     @Test
     void allThree() {
-        assertEquals("Lord Azurov the Veteran of The Tribunal",
-                CharacterName.of(with("Azurov", titles(
+        assertEquals("Lord Capna the Veteran of The Tribunal",
+                CharacterName.of(with("Capna", titles(
                         TitleSlot.NOBLE, "Lord",
                         TitleSlot.VIRTUE, "Veteran",
                         TitleSlot.GOVERNMENT, "The Tribunal")), "fallback"));
@@ -41,19 +41,19 @@ class CharacterNameTest {
 
     @Test
     void noneAtAll() {
-        assertEquals("Azurov", CharacterName.of(with("Azurov", titles()), "fallback"));
+        assertEquals("Capna", CharacterName.of(with("Capna", titles()), "fallback"));
     }
 
     @Test
     void theOnlyAppearsWithAVirtueTitle() {
-        assertEquals("Lord Azurov",
-                CharacterName.of(with("Azurov", titles(TitleSlot.NOBLE, "Lord")), "fallback"));
+        assertEquals("Lord Capna",
+                CharacterName.of(with("Capna", titles(TitleSlot.NOBLE, "Lord")), "fallback"));
     }
 
     @Test
     void ofOnlyAppearsWithAGovernmentTitle() {
-        assertEquals("Azurov of The Tribunal",
-                CharacterName.of(with("Azurov", titles(
+        assertEquals("Capna of The Tribunal",
+                CharacterName.of(with("Capna", titles(
                         TitleSlot.GOVERNMENT, "The Tribunal")), "fallback"));
     }
 

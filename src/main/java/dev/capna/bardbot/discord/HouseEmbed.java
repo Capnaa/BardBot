@@ -1,6 +1,7 @@
 package dev.capna.bardbot.discord;
 
 import dev.capna.bardbot.model.House;
+import dev.capna.bardbot.model.HouseColor;
 import dev.capna.bardbot.model.Standings;
 import dev.capna.bardbot.store.ProfileStore;
 import net.dv8tion.jda.api.EmbedBuilder;
@@ -26,7 +27,11 @@ public final class HouseEmbed {
 
     public static MessageEmbed of(House house, ProfileStore profiles,
                                   int thisMonth, int allTime, Optional<Integer> place) {
-        EmbedBuilder embed = new EmbedBuilder().setTitle(Names.plain(house.name()));
+        EmbedBuilder embed = new EmbedBuilder()
+                .setTitle(Names.plain(house.name()))
+                // The stripe down the side is the one place a house's color is visible without
+                // reading anything, so it is set even when the house has chosen nothing.
+                .setColor(house.color().rgb());
         house.crestUrl().ifPresent(embed::setThumbnail);
 
         StringBuilder description = new StringBuilder();
@@ -42,10 +47,12 @@ public final class HouseEmbed {
                 names(house.headIds(), profiles), true);
         embed.addField("Members", String.valueOf(house.everyone().size()), true);
 
-        embed.addField("Renown", "```\n"
-                + String.format("%-11s %6d%s%n", "This month", thisMonth,
-                        place.map(p -> "   #" + p).orElse(""))
-                + String.format("%-11s %6d%n", "All time", allTime)
+        embed.addField("Renown", Ansi.FENCE
+                + Ansi.white(String.format("%-11s", "This month")) + " "
+                + Ansi.number(String.format("%6d", thisMonth))
+                + place.map(rank -> "   #" + rank).orElse("") + "\n"
+                + Ansi.white(String.format("%-11s", "All time")) + " "
+                + Ansi.number(String.format("%6d", allTime)) + "\n"
                 + "```", false);
 
         if (!house.nobleTitles().isEmpty()) {
@@ -69,20 +76,24 @@ public final class HouseEmbed {
     }
 
     /** One row of a house leaderboard. */
-    public static MessageEmbed leaderboard(String title, List<Standings.Place> places) {
+    public static MessageEmbed leaderboard(String title, List<Standings.Place> places,
+                                           java.util.function.Function<String, HouseColor> colors) {
         EmbedBuilder embed = new EmbedBuilder().setTitle(title);
         if (places.isEmpty()) {
             embed.setDescription("There are no houses yet.");
             return embed.build();
         }
-        StringBuilder rows = new StringBuilder();
+        StringBuilder rows = new StringBuilder(Ansi.FENCE);
         for (int i = 0; i < places.size(); i++) {
             Standings.Place place = places.get(i);
-            rows.append(i + 1).append(". ")
-                    .append(Names.escaped(place.houseName()))
-                    .append(": ").append(place.renown())
+            rows.append(Ansi.white(String.format("%2d.", i + 1)))
+                    .append(" ")
+                    .append(colors.apply(place.houseId())
+                            .paint(String.format("%-24s", Ansi.inFence(place.houseName()))))
+                    .append(Ansi.number(String.valueOf(place.renown())))
                     .append('\n');
         }
+        rows.append("```");
         embed.setDescription(rows.toString());
         return embed.build();
     }

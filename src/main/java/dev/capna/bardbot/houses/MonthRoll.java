@@ -39,12 +39,14 @@ public final class MonthRoll {
 
     private final Renown renown;
     private final RenownStore archive;
+    private final dev.capna.bardbot.store.HouseStore houses;
     private final AwardLog awards;
     private final SettingsStore settings;
     private final ZoneId zone;
 
     public MonthRoll(Renown renown, RenownStore archive, AwardLog awards, SettingsStore settings,
-                     ZoneId zone) {
+                     dev.capna.bardbot.store.HouseStore houses, ZoneId zone) {
+        this.houses = Objects.requireNonNull(houses, "houses");
         this.renown = Objects.requireNonNull(renown, "renown");
         this.archive = Objects.requireNonNull(archive, "archive");
         this.awards = Objects.requireNonNull(awards, "awards");
@@ -101,7 +103,7 @@ public final class MonthRoll {
                     channelId.get(), standings.month());
             return;
         }
-        channel.sendMessageEmbeds(StandingsEmbed.of(standings)).queue(null, error ->
+        channel.sendMessageEmbeds(StandingsEmbed.of(standings, houses::colorOf)).queue(null, error ->
                 LOG.warn("Could not post the standings for {}: {}",
                         standings.month(), error.getMessage()));
     }

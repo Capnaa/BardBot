@@ -110,7 +110,8 @@ public final class AdminCommand implements SlashCommand {
                                 .addSubcommands(
                                         new SubcommandData("add", "Found a house under a head")
                                                 .addOption(OptionType.STRING, "name", "Its name", true)
-                                                .addOption(OptionType.USER, "head", "Who leads it", true),
+                                                .addOption(OptionType.USER, "head", "Who leads it", true)
+                                                .addOptions(colorOption()),
                                         new SubcommandData("remove", "Dissolve a house")
                                                 .addOption(OptionType.STRING, "name", "Which house",
                                                         true, true),
@@ -187,6 +188,15 @@ public final class AdminCommand implements SlashCommand {
         });
     }
 
+    /** The eight colors a house may be written in. Fixed, since a code block has no others. */
+    static OptionData colorOption() {
+        OptionData color = new OptionData(OptionType.STRING, "color",
+                "The color the house is written in", false);
+        java.util.Arrays.stream(dev.capna.bardbot.model.HouseColor.values())
+                .forEach(value -> color.addChoice(value.display(), value.key()));
+        return color;
+    }
+
     private void channel(SlashCommandInteractionEvent event) throws Exception {
         ChannelRole role = ChannelRole.byKey(
                 event.getOption("which", "", OptionMapping::getAsString)).orElseThrow();
@@ -201,13 +211,21 @@ public final class AdminCommand implements SlashCommand {
                 Replies.quietly(event, "No goals have been set yet.");
                 return;
             }
-            StringBuilder rows = new StringBuilder();
+            StringBuilder rows = new StringBuilder(dev.capna.bardbot.discord.Ansi.FENCE);
             for (Goal goal : goals) {
-                rows.append(goal.virtue().map(Virtue::display).orElse("Total"))
-                        .append(' ').append(goal.threshold())
-                        .append(": ").append(goal.title().orElse("(no title)"))
+                String name = goal.title().orElse("(no title)");
+                rows.append(goal.virtue()
+                                .map(virtue -> dev.capna.bardbot.discord.Ansi.virtue(virtue,
+                                        String.format("%-6s", virtue.display())))
+                                .orElseGet(() -> dev.capna.bardbot.discord.Ansi.white(
+                                        String.format("%-6s", "Total"))))
+                        .append(" ")
+                        .append(dev.capna.bardbot.discord.Ansi.number(
+                                String.format("%5d", goal.threshold())))
+                        .append("  ").append(dev.capna.bardbot.discord.Ansi.inFence(name))
                         .append('\n');
             }
+            rows.append("```");
             Replies.quietly(event, rows.toString());
             return;
         }
@@ -239,7 +257,10 @@ public final class AdminCommand implements SlashCommand {
                     User head = event.getOption("head", OptionMapping::getAsUser);
                     House created = houses.add(
                             event.getOption("name", "", OptionMapping::getAsString),
-                            Objects.requireNonNull(head).getId());
+                            Objects.requireNonNull(head).getId(),
+                            dev.capna.bardbot.model.HouseColor
+                                    .byKey(event.getOption("color", "", OptionMapping::getAsString))
+                                    .orElse(dev.capna.bardbot.model.HouseColor.fallback()));
                     Replies.quietly(event, created.name() + " has been founded under "
                             + head.getEffectiveName() + ".");
                 }
@@ -389,7 +410,7 @@ public final class AdminCommand implements SlashCommand {
                         `/admin goal remove`, `/admin goal list`: the rest.
                         `/admin title grant`: give a Bard a government title. Leave out the \
                         word "of", the bot puts that in. Type `The Tribunal` and it reads as \
-                        "Azurov of The Tribunal".
+                        "Capna of The Tribunal".
                         `/admin title revoke`: take one back.""", false)
                 .addField("Houses",
                         """

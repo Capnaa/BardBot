@@ -28,6 +28,7 @@ public record House(String id,
                     Optional<String> motto,
                     Optional<String> description,
                     Optional<String> crestUrl,
+                    HouseColor color,
                     List<String> headIds,
                     Set<String> memberIds,
                     Set<String> invitedIds,
@@ -40,6 +41,7 @@ public record House(String id,
     public static final int MAX_TITLE = 32;
 
     public House {
+        color = color == null ? HouseColor.fallback() : color;
         headIds = List.copyOf(headIds);
         memberIds = Set.copyOf(memberIds);
         invitedIds = Set.copyOf(invitedIds);
@@ -82,6 +84,12 @@ public record House(String id,
      * store rebuilds one. Doing it here once means a new field cannot be forgotten in nine
      * different places.
      */
+    /** A copy in a different color. Kept apart from {@link #with} so no call site has to change. */
+    public House withColor(HouseColor newColor) {
+        return new House(id, name, motto, description, crestUrl, newColor,
+                headIds, memberIds, invitedIds, nobleTitles, nobleGrants);
+    }
+
     public House with(Optional<String> newName,
                       Optional<String> newMotto,
                       Optional<String> newDescription,
@@ -96,6 +104,7 @@ public record House(String id,
                 newMotto.or(() -> motto),
                 newDescription.or(() -> description),
                 newCrest.or(() -> crestUrl),
+                color,
                 newHeads == null ? headIds : newHeads,
                 newMembers == null ? memberIds : newMembers,
                 newInvited == null ? invitedIds : newInvited,

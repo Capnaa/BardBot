@@ -185,7 +185,7 @@ public final class HelpCommand implements SlashCommand {
                 .setDescription("""
                         You have three title slots, and they show up in your name in this order:
 
-                        > **Lord** Azurov the **Veteran** of **The Tribunal**
+                        > **Lord** Capna the **Veteran** of **The Tribunal**
 
                         Those three titles are `Lord`, `Veteran` and `The Tribunal`. The words \
                         "the" and "of" are put in by the bot, so no title contains them. A slot \

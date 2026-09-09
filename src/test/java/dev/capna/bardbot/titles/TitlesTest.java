@@ -103,7 +103,7 @@ class TitlesTest {
         worn.put(TitleSlot.VIRTUE, "Veteran");
         worn.put(TitleSlot.GOVERNMENT, "The Tribunal");
 
-        Profile wearing = new Profile("bard", Optional.of("Azurov"), Optional.empty(),
+        Profile wearing = new Profile("bard", Optional.of("Capna"), Optional.empty(),
                 Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(),
                 worn, Set.of("The Tribunal"));
 

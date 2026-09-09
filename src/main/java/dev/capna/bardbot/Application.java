@@ -96,7 +96,7 @@ public final class Application implements AutoCloseable {
         Awarding awarding = new Awarding(awards, houses, catalogue);
         Unlocks unlockAnnouncer = new Unlocks(settings);
 
-        this.monthRoll = new MonthRoll(houseRenown, renown, awards, settings,
+        this.monthRoll = new MonthRoll(houseRenown, renown, awards, settings, houses,
                 config.renown().zone());
         this.schedule = Executors.newSingleThreadScheduledExecutor(runnable -> {
             Thread thread = new Thread(runnable, "schedule");
@@ -104,7 +104,7 @@ public final class Application implements AutoCloseable {
             return thread;
         });
 
-        LiveBoards boards = new LiveBoards(settings, awards, profiles, houseRenown, schedule);
+        LiveBoards boards = new LiveBoards(settings, awards, profiles, houseRenown, houses, schedule);
 
         this.registry = new CommandRegistry(settings)
                 .add(new ProfileCommand(profiles, houses, awards, titleHoldings))
