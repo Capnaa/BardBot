@@ -110,7 +110,14 @@ public final class Titles {
     public Profile pruned(Profile profile) {
         Map<TitleSlot, String> equipped = new java.util.EnumMap<>(TitleSlot.class);
         for (Map.Entry<TitleSlot, String> entry : profile.equipped().entrySet()) {
-            if (holds(profile.userId(), entry.getKey(), entry.getValue())) {
+            // Government grants are read from the profile in hand rather than looked up again.
+            // A caller may be holding a profile that has not been stored yet, and pruning it
+            // against the stored copy would silently strip a title that was just granted.
+            boolean held = entry.getKey() == TitleSlot.GOVERNMENT
+                    ? profile.governmentTitles().stream()
+                            .anyMatch(title -> title.equalsIgnoreCase(entry.getValue()))
+                    : holds(profile.userId(), entry.getKey(), entry.getValue());
+            if (held) {
                 equipped.put(entry.getKey(), entry.getValue());
             }
         }

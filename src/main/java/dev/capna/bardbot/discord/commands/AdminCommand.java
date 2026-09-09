@@ -387,8 +387,9 @@ public final class AdminCommand implements SlashCommand {
                         `/admin goal add`: set a score that unlocks a virtue title. Adding one \
                         at a score that already has a goal replaces it.
                         `/admin goal remove`, `/admin goal list`: the rest.
-                        `/admin title grant`: give a Bard a government title. Type it exactly \
-                        as it should read, for example `of The Tribunal`.
+                        `/admin title grant`: give a Bard a government title. Leave out the \
+                        word "of", the bot puts that in. Type `The Tribunal` and it reads as \
+                        "Azurov of The Tribunal".
                         `/admin title revoke`: take one back.""", false)
                 .addField("Houses",
                         """

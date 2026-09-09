@@ -185,10 +185,11 @@ public final class HelpCommand implements SlashCommand {
                 .setDescription("""
                         You have three title slots, and they show up in your name in this order:
 
-                        > **Lord** Azurov **the Veteran** of **The Tribunal**
+                        > **Lord** Azurov the **Veteran** of **The Tribunal**
 
-                        The words "the" and "of" appear on their own, you do not type them. A \
-                        slot you leave empty is simply skipped.""")
+                        Those three titles are `Lord`, `Veteran` and `The Tribunal`. The words \
+                        "the" and "of" are put in by the bot, so no title contains them. A slot \
+                        you leave empty is skipped, and so is its joining word.""")
                 .addField("Where each one comes from",
                         """
                         **Noble**: from your house. Your house's head decides which of the \
@@ -205,8 +206,8 @@ public final class HelpCommand implements SlashCommand {
                 .addField("Wearing one",
                         """
                         Run `/title set`. Pick which slot in the `slot` box, then click the \
-                        `title` box, **a list will appear of the titles you are allowed to \
-                        wear.** Pick one from that list. Do not type it yourself.
+                        `title` box. **A list appears of the titles you are allowed to wear.** \
+                        Pick one from that list. Do not type it yourself.
 
                         To empty a slot, pick **None** from the same list.
 
