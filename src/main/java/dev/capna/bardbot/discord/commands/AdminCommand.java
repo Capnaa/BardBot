@@ -1,5 +1,6 @@
 package dev.capna.bardbot.discord.commands;
 
+import dev.capna.bardbot.discord.CommandRegistry;
 import dev.capna.bardbot.discord.Names;
 import dev.capna.bardbot.discord.Replies;
 import dev.capna.bardbot.discord.SlashCommand;
@@ -11,6 +12,7 @@ import dev.capna.bardbot.model.Virtue;
 import dev.capna.bardbot.discord.LiveBoards;
 import dev.capna.bardbot.ops.BoardKind;
 import dev.capna.bardbot.ops.ChannelRole;
+import dev.capna.bardbot.ops.Feature;
 import dev.capna.bardbot.ops.SettingsStore;
 import dev.capna.bardbot.store.CatalogueStore;
 import dev.capna.bardbot.store.HouseStore;
@@ -20,6 +22,7 @@ import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.entities.MessageEmbed;
 import net.dv8tion.jda.api.entities.User;
+import net.dv8tion.jda.api.entities.channel.ChannelType;
 import net.dv8tion.jda.api.events.interaction.command.CommandAutoCompleteInteractionEvent;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import net.dv8tion.jda.api.interactions.commands.Command;
@@ -58,10 +61,16 @@ public final class AdminCommand implements SlashCommand {
     private final ProfileStore profiles;
     private final LiveBoards boards;
     private final WritStore writs;
+    private final CommandRegistry registry;
 
+    /**
+     * @param registry the registry this command is itself in. Needed to re-register after a
+     *                 feature is switched, since Discord only learns which commands exist at
+     *                 registration and a feature switched on would otherwise wait for a restart.
+     */
     public AdminCommand(Tribunal tribunal, SettingsStore settings, CatalogueStore catalogue,
                         HouseStore houses, ProfileStore profiles, LiveBoards boards,
-                        WritStore writs) {
+                        WritStore writs, CommandRegistry registry) {
         this.tribunal = Objects.requireNonNull(tribunal, "tribunal");
         this.settings = Objects.requireNonNull(settings, "settings");
         this.catalogue = Objects.requireNonNull(catalogue, "catalogue");
@@ -69,6 +78,7 @@ public final class AdminCommand implements SlashCommand {
         this.profiles = Objects.requireNonNull(profiles, "profiles");
         this.boards = Objects.requireNonNull(boards, "boards");
         this.writs = Objects.requireNonNull(writs, "writs");
+        this.registry = Objects.requireNonNull(registry, "registry");
     }
 
     @Override
@@ -87,6 +97,11 @@ public final class AdminCommand implements SlashCommand {
         Arrays.stream(Virtue.values())
                 .forEach(value -> virtue.addChoice(value.display(), value.key()));
         virtue.addChoice("Total", "total");
+
+        OptionData feature = new OptionData(OptionType.STRING, "which", "Which feature", true);
+        Arrays.stream(Feature.values())
+                .forEach(value -> feature.addChoice(value.name().toLowerCase(Locale.ROOT),
+                        value.name()));
 
         return Commands.slash(NAME, "Tribunal business")
                 .addSubcommands(new SubcommandData("help",
@@ -150,7 +165,14 @@ public final class AdminCommand implements SlashCommand {
                                         new SubcommandData("add", "Give them one, up to the cap")
                                                 .addOption(OptionType.USER, "member", "Who", true),
                                         new SubcommandData("remove", "Take one away")
-                                                .addOption(OptionType.USER, "member", "Who", true)));
+                                                .addOption(OptionType.USER, "member", "Who", true)),
+                        new SubcommandGroupData("feature", "Switch parts of the bot on and off")
+                                .addSubcommands(
+                                        new SubcommandData("on", "Switch a feature on")
+                                                .addOptions(feature),
+                                        new SubcommandData("off", "Switch a feature off")
+                                                .addOptions(feature),
+                                        new SubcommandData("list", "What is on and what is off")));
     }
 
     @Override
@@ -177,8 +199,38 @@ public final class AdminCommand implements SlashCommand {
             case "title" -> title(event, subcommand);
             case "leaderboard" -> leaderboard(event, subcommand);
             case "writ" -> writ(event, subcommand);
+            case "feature" -> feature(event, subcommand);
             default -> Replies.problem(event, "That is not something this command does.");
         }
+    }
+
+    /**
+     * Switches a feature, then tells Discord which commands exist now.
+     *
+     * <p>Re-registering is the half people forget. The dispatcher checks the toggle on every
+     * command, so switching off takes effect at once either way; switching on would leave the
+     * commands invisible until the next restart without it.
+     */
+    private void feature(SlashCommandInteractionEvent event, String subcommand) throws Exception {
+        if ("list".equals(subcommand)) {
+            StringBuilder rows = new StringBuilder();
+            for (Feature feature : Feature.values()) {
+                rows.append(settings.isEnabled(feature) ? "✓ " : "✗ ")
+                        .append(feature.name().toLowerCase(Locale.ROOT)).append('\n');
+            }
+            Replies.quietly(event, rows.toString());
+            return;
+        }
+        Feature feature = Feature.valueOf(event.getOption("which", "", OptionMapping::getAsString));
+        boolean on = "on".equals(subcommand);
+        settings.setFeature(feature, on);
+        Objects.requireNonNull(event.getGuild()).updateCommands()
+                .addCommands(registry.enabledDefinitions())
+                .queue(registered -> Replies.quietly(event, feature.name().toLowerCase(Locale.ROOT)
+                                + " is now " + (on ? "on" : "off") + ". " + registered.size()
+                                + " command(s) registered. Discord can take a minute to show "
+                                + "the change; switch channel and back if it has not."),
+                        error -> Replies.failed(event, NAME, error));
     }
 
     /**
@@ -232,9 +284,38 @@ public final class AdminCommand implements SlashCommand {
         return color;
     }
 
+    /**
+     * Points a role at the channel the command was run in.
+     *
+     * <p>The Virtue Board is the exception, because it is a forum and Discord will not let anyone
+     * type in a forum's top level, only inside a post. So the command is run from a post, and what
+     * gets stored is the forum the post belongs to. Storing the post itself is the mistake this
+     * used to make: the post is a thread, not a forum, and the bot could never find it again.
+     */
     private void channel(SlashCommandInteractionEvent event) throws Exception {
         ChannelRole role = ChannelRole.byKey(
                 event.getOption("which", "", OptionMapping::getAsString)).orElseThrow();
+
+        if (role == ChannelRole.VIRTUE_BOARD) {
+            if (!event.getChannelType().isThread()
+                    || event.getChannel().asThreadChannel().getParentChannel().getType()
+                            != ChannelType.FORUM) {
+                Replies.problem(event, "The Virtue Board has to be a forum. Open any post in "
+                        + "the forum and run this there.");
+                return;
+            }
+            String forumId = event.getChannel().asThreadChannel().getParentChannel().getId();
+            settings.setChannel(role, forumId);
+            Replies.quietly(event, "Public writ tasks will be posted in <#" + forumId
+                    + "> from now on.");
+            return;
+        }
+
+        if (event.getChannelType() != ChannelType.TEXT) {
+            Replies.problem(event, role.display() + " messages need an ordinary text channel. "
+                    + "Run this in one.");
+            return;
+        }
         settings.setChannel(role, event.getChannelId());
         Replies.quietly(event, role.display() + " messages will be posted here from now on.");
     }
@@ -438,7 +519,8 @@ public final class AdminCommand implements SlashCommand {
                         summary; use a channel only the tribunal can read. **Console**: the \
                         bot's own errors. **Writs**: writs being served, completed and struck. \
                         **The Virtue Board**: where public writ tasks are posted. This one has \
-                        to be a forum, so run the command inside the forum.
+                        to be a forum. Open any post in the forum and run the command there; \
+                        the bot works out which forum it belongs to.
 
                         You can point more than one at the same channel.""", false)
                 .addField("Goals and titles",
@@ -463,6 +545,15 @@ public final class AdminCommand implements SlashCommand {
                         `/admin leaderboard house`. The bot posts one message there and keeps \
                         editing it as awards come in. Do not delete that message, if you do, \
                         run the command again to make a new one.""", false)
+                .addField("Switching features on and off",
+                        """
+                        `/admin feature on` and `off`: switch a whole part of the bot, such as \
+                        writs or the Path. Its commands disappear from Discord when it is off \
+                        and come back when it is on. Nothing is deleted either way.
+                        `/admin feature list`: what is on right now.
+
+                        A feature added in an update starts off until you switch it on here.""",
+                        false)
                 .addField("Imperial writs",
                         """
                         A writ lets you hand out work. Everyone on the tribunal gets one on the \
@@ -476,7 +567,10 @@ public final class AdminCommand implements SlashCommand {
                         member. They get pinged in the writ channel. When they finish it, the \
                         writ is theirs.
                         `/tribunal writ view`: your writs, the tasks on you, and the tasks you \
-                        have served on others. The numbers here are what the next three take.
+                        have served on others. The numbers here are what the next three take.""",
+                        false)
+                .addField("Finishing and undoing writs",
+                        """
                         `/tribunal writ complete`: mark a task on you done. A box asks for \
                         coords or a link; fill in at least one.
                         `/tribunal writ cancel`: take back a task you served. The writ comes \

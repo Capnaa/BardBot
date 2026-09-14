@@ -56,6 +56,7 @@ Tribunal only:
 | `/admin house add\|remove\|addhead\|removehead` | Founding and running houses |
 | `/admin title grant\|revoke` | Government titles |
 | `/admin leaderboard virtue\|house` | Plant a board that keeps itself up to date |
+| `/admin feature on\|off\|list` | Switch whole parts of the bot on and off |
 | `/admin writ add\|remove` | Fix a tribunal member's writ count by one |
 | `/tribunal writ view` | Your writs, the tasks on you, and the tasks you have served |
 | `/tribunal writ task` | Spend a writ on a public task in The Virtue Board |
@@ -132,11 +133,13 @@ Which channels the bot posts in is not configured in the file. Go to the channel
 
 ### Invite
 
-Permissions are the smallest set where every command works: View Channels, Send Messages and Embed
-Links, which is `19456`, plus the `applications.commands` scope.
+Permissions are the smallest set where every command works: View Channels, Send Messages, Embed
+Links, Send Messages in Threads and Manage Roles, which is `268722176`, plus the
+`applications.commands` scope. Manage Roles is for taking the Pilgrim role off on the first, and
+the bot's own role has to sit above Pilgrim in the role list or Discord refuses.
 
 ```
-https://discord.com/oauth2/authorize?client_id=YOUR_APPLICATION_ID&scope=bot%20applications.commands&permissions=19456
+https://discord.com/oauth2/authorize?client_id=YOUR_APPLICATION_ID&scope=bot%20applications.commands&permissions=268722176
 ```
 
 In the developer portal, turn the **Server Members Intent** on, so leaderboards can resolve a page

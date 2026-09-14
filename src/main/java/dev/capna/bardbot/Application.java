@@ -128,8 +128,9 @@ public final class Application implements AutoCloseable {
 
         LiveBoards boards = new LiveBoards(settings, awards, profiles, houseRenown, houses, schedule);
 
-        this.registry = new CommandRegistry(settings)
-                .add(new ProfileCommand(profiles, houses, awards, titleHoldings))
+        // Built before the commands are added, because /admin needs a reference to it.
+        this.registry = new CommandRegistry(settings);
+        registry.add(new ProfileCommand(profiles, houses, awards, titleHoldings))
                 .add(new AwardCommand(tribunal, awarding, unlockAnnouncer, profiles, settings,
                         boards, path))
                 .add(new AwardVirtueCommand(tribunal, awarding, unlockAnnouncer, profiles, boards,
@@ -137,7 +138,7 @@ public final class Application implements AutoCloseable {
                 .add(new VirtueCommand(awards, catalogue, profiles, config.renown().zone()))
                 .add(new TitleCommand(titleHoldings, profiles))
                 .add(new AdminCommand(tribunal, settings, catalogue, houses, profiles, boards,
-                        writs))
+                        writs, registry))
                 .add(new HouseCommand(houses, profiles, houseRenown, renown))
                 .add(new TribunalCommand(tribunal, emperor, writs, settings))
                 .add(new PathCommand(path, profiles, settings, unlockAnnouncer, boards))

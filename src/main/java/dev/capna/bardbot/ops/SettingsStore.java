@@ -58,6 +58,17 @@ public final class SettingsStore {
         LOG.info("{} messages now go to channel {}", role.display(), channelId);
     }
 
+    /**
+     * Switches a feature on or off.
+     *
+     * <p>This is the only way a feature added after first start ever comes on: the file wins over
+     * configuration, and a file written before the feature existed does not list it.
+     */
+    public synchronized void setFeature(Feature feature, boolean on) throws IOException {
+        update(current.with(feature, on));
+        LOG.info("{} is now {}", feature, on ? "on" : "off");
+    }
+
     /** Where a standing leaderboard lives, as {@code channelId/messageId}. */
     public Optional<String> board(BoardKind kind) {
         return current.board(kind);
