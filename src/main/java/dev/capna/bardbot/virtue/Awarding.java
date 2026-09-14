@@ -71,12 +71,22 @@ public final class Awarding {
      */
     public Result apply(String recipientId, String granterId, Virtue virtue, int amount,
                         Optional<String> reason) throws IOException {
+        return apply(recipientId, granterId, virtue, amount, reason, false);
+    }
+
+    /**
+     * @param voucher whether this is a Path voucher being claimed rather than virtue being earned.
+     *                Goes through the same path as everything else so it crosses the same goals;
+     *                the flag only keeps it off the Path's own tally.
+     */
+    public Result apply(String recipientId, String granterId, Virtue virtue, int amount,
+                        Optional<String> reason, boolean voucher) throws IOException {
         int scoreBefore = awards.score(recipientId, virtue);
         int totalBefore = awards.total(recipientId);
         Optional<House> house = houses.holding(recipientId);
 
         awards.append(new Award(recipientId, granterId, virtue, amount, reason,
-                house.map(House::id), Instant.now()));
+                house.map(House::id), Instant.now(), voucher));
 
         int scoreAfter = scoreBefore + amount;
         int totalAfter = totalBefore + amount;

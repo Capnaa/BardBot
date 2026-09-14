@@ -4,6 +4,7 @@ import dev.capna.bardbot.config.BotConfig;
 import dev.capna.bardbot.config.Token;
 import dev.capna.bardbot.discord.BotListener;
 import dev.capna.bardbot.discord.CommandRegistry;
+import dev.capna.bardbot.discord.Emperor;
 import dev.capna.bardbot.discord.LiveBoards;
 import dev.capna.bardbot.discord.Tribunal;
 import dev.capna.bardbot.discord.commands.AdminCommand;
@@ -11,14 +12,19 @@ import dev.capna.bardbot.discord.commands.AwardCommand;
 import dev.capna.bardbot.discord.commands.AwardVirtueCommand;
 import dev.capna.bardbot.discord.commands.HelpCommand;
 import dev.capna.bardbot.discord.commands.HouseCommand;
+import dev.capna.bardbot.discord.commands.PathCommand;
+import dev.capna.bardbot.discord.commands.TribunalCommand;
 import dev.capna.bardbot.houses.MonthRoll;
 import dev.capna.bardbot.houses.Renown;
 import dev.capna.bardbot.discord.commands.ProfileCommand;
 import dev.capna.bardbot.discord.commands.TitleCommand;
 import dev.capna.bardbot.discord.commands.VirtueCommand;
+import dev.capna.bardbot.path.PathOfVirtue;
+import dev.capna.bardbot.path.PathRoll;
 import dev.capna.bardbot.titles.Titles;
 import dev.capna.bardbot.virtue.Awarding;
 import dev.capna.bardbot.virtue.Unlocks;
+import dev.capna.bardbot.writs.WritRoll;
 import dev.capna.bardbot.ops.ConsoleMirror;
 import dev.capna.bardbot.ops.Feature;
 import dev.capna.bardbot.ops.Settings;
@@ -26,8 +32,10 @@ import dev.capna.bardbot.ops.SettingsStore;
 import dev.capna.bardbot.store.AwardLog;
 import dev.capna.bardbot.store.CatalogueStore;
 import dev.capna.bardbot.store.HouseStore;
+import dev.capna.bardbot.store.PathStore;
 import dev.capna.bardbot.store.ProfileStore;
 import dev.capna.bardbot.store.RenownStore;
+import dev.capna.bardbot.store.WritStore;
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.JDABuilder;
 import net.dv8tion.jda.api.entities.Guild;
@@ -64,11 +72,15 @@ public final class Application implements AutoCloseable {
     private final AwardLog awards;
     private final CatalogueStore catalogue;
     private final RenownStore renown;
+    private final WritStore writs;
+    private final PathStore pathStore;
 
     private final ExecutorService commands;
     private final ScheduledExecutorService schedule;
     private final CommandRegistry registry;
     private final MonthRoll monthRoll;
+    private final WritRoll writRoll;
+    private final PathRoll pathRoll;
 
     private JDA jda;
 
@@ -82,6 +94,8 @@ public final class Application implements AutoCloseable {
         this.awards = new AwardLog(config.paths().awards());
         this.catalogue = new CatalogueStore(config.paths().titles());
         this.renown = new RenownStore(config.paths().renown());
+        this.writs = new WritStore(config.paths().writs());
+        this.pathStore = new PathStore(config.paths().path());
 
         this.commands = Executors.newFixedThreadPool(config.limits().maxConcurrentOperations(),
                 runnable -> {
@@ -91,13 +105,21 @@ public final class Application implements AutoCloseable {
                     return thread;
                 });
         Tribunal tribunal = new Tribunal(config.discord().tribunalRoleIds());
+        Emperor emperor = new Emperor(config.discord().emperorRoleId());
         Titles titleHoldings = new Titles(profiles, houses, awards, catalogue);
         Renown houseRenown = new Renown(awards, houses, config.renown().zone());
         Awarding awarding = new Awarding(awards, houses, catalogue);
         Unlocks unlockAnnouncer = new Unlocks(settings);
+        PathOfVirtue path = new PathOfVirtue(awards, pathStore, awarding, settings,
+                config.discord().guildId(), config.discord().pilgrimRoleId(),
+                config.renown().zone());
 
         this.monthRoll = new MonthRoll(houseRenown, renown, awards, settings, houses,
                 config.renown().zone());
+        this.writRoll = new WritRoll(writs, config.discord().guildId(),
+                config.discord().tribunalRoleIds(), config.renown().zone());
+        this.pathRoll = new PathRoll(path, pathStore, awards, settings,
+                config.discord().guildId(), config.renown().zone());
         this.schedule = Executors.newSingleThreadScheduledExecutor(runnable -> {
             Thread thread = new Thread(runnable, "schedule");
             thread.setDaemon(true);
@@ -108,12 +130,17 @@ public final class Application implements AutoCloseable {
 
         this.registry = new CommandRegistry(settings)
                 .add(new ProfileCommand(profiles, houses, awards, titleHoldings))
-                .add(new AwardCommand(tribunal, awarding, unlockAnnouncer, profiles, settings, boards))
-                .add(new AwardVirtueCommand(tribunal, awarding, unlockAnnouncer, profiles, boards))
+                .add(new AwardCommand(tribunal, awarding, unlockAnnouncer, profiles, settings,
+                        boards, path))
+                .add(new AwardVirtueCommand(tribunal, awarding, unlockAnnouncer, profiles, boards,
+                        path))
                 .add(new VirtueCommand(awards, catalogue, profiles, config.renown().zone()))
                 .add(new TitleCommand(titleHoldings, profiles))
-                .add(new AdminCommand(tribunal, settings, catalogue, houses, profiles, boards))
+                .add(new AdminCommand(tribunal, settings, catalogue, houses, profiles, boards,
+                        writs))
                 .add(new HouseCommand(houses, profiles, houseRenown, renown))
+                .add(new TribunalCommand(tribunal, emperor, writs, settings))
+                .add(new PathCommand(path, profiles, settings, unlockAnnouncer, boards))
                 .add(new HelpCommand());
     }
 
@@ -140,16 +167,43 @@ public final class Application implements AutoCloseable {
 
         // Checked at startup as well as on the schedule, so a bot that was down when a month
         // ended settles it as soon as it is back rather than waiting for the next one.
-        monthRoll.settleDue(jda);
-        schedule.scheduleAtFixedRate(() -> {
-            try {
-                monthRoll.settleDue(jda);
-            } catch (RuntimeException e) {
-                LOG.error("The monthly roll failed; it will be tried again", e);
-            }
-        }, untilNextRoll().toSeconds(), Duration.ofDays(1).toSeconds(), TimeUnit.SECONDS);
+        roll();
+        schedule.scheduleAtFixedRate(this::roll, untilNextRoll().toSeconds(),
+                Duration.ofDays(1).toSeconds(), TimeUnit.SECONDS);
 
         LOG.info("BardBot is up in {}", guild.getName());
+    }
+
+    /**
+     * Everything that happens on the first of the month.
+     *
+     * <p>Each part guards itself against running twice, and each is tried whether or not the one
+     * before it failed: a broken house roll must not stop the writs going out.
+     *
+     * <p>The writ and Path rolls are skipped while their feature is off. The house roll is not,
+     * since it only archives; a switched-off Path that still took the role off everyone would be
+     * a switch that did not switch anything off.
+     */
+    private void roll() {
+        try {
+            monthRoll.settleDue(jda);
+        } catch (RuntimeException e) {
+            LOG.error("The monthly roll failed; it will be tried again", e);
+        }
+        if (settings.isEnabled(Feature.WRITS)) {
+            try {
+                writRoll.grantDue(jda);
+            } catch (RuntimeException e) {
+                LOG.error("The writ grant failed; it will be tried again", e);
+            }
+        }
+        if (settings.isEnabled(Feature.PATH)) {
+            try {
+                pathRoll.settleDue(jda);
+            } catch (RuntimeException e) {
+                LOG.error("The Path roll failed; it will be tried again", e);
+            }
+        }
     }
 
     /**
@@ -203,6 +257,12 @@ public final class Application implements AutoCloseable {
         }
         if (config.features().titles()) {
             enabled.add(Feature.TITLES);
+        }
+        if (config.features().writs()) {
+            enabled.add(Feature.WRITS);
+        }
+        if (config.features().path()) {
+            enabled.add(Feature.PATH);
         }
         return new Settings(enabled, java.util.Map.of(), java.util.Map.of());
     }

@@ -22,6 +22,10 @@ import java.util.Optional;
  *                    Recorded here rather than looked up later, because renown belongs to the house
  *                    that held them when it was earned, not to whichever house holds them now.
  * @param at          when, which is also what decides the month it counts toward
+ * @param voucher     whether it was claimed with a Path voucher rather than earned. Real virtue
+ *                    either way, for titles, leaderboards and renown; the one thing it does not
+ *                    count toward is the Path itself, or two vouchers would be most of the way to
+ *                    the next one.
  */
 public record Award(String recipientId,
                     String granterId,
@@ -29,8 +33,15 @@ public record Award(String recipientId,
                     int amount,
                     Optional<String> reason,
                     Optional<String> houseId,
-                    Instant at) {
+                    Instant at,
+                    boolean voucher) {
 
     /** Long enough to say what someone did, short enough to read in a list of them. */
     public static final int MAX_REASON = 200;
+
+    /** An award that was earned, which is every award there was before vouchers existed. */
+    public Award(String recipientId, String granterId, Virtue virtue, int amount,
+                 Optional<String> reason, Optional<String> houseId, Instant at) {
+        this(recipientId, granterId, virtue, amount, reason, houseId, at, false);
+    }
 }

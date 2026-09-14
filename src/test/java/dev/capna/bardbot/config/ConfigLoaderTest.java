@@ -14,6 +14,8 @@ class ConfigLoaderTest {
         Properties properties = new Properties();
         properties.setProperty("discord.guild.id", "1172634772388970496");
         properties.setProperty("discord.roles.tribunal", "1223479239815467093");
+        properties.setProperty("discord.roles.emperor", "1172635393934495814");
+        properties.setProperty("discord.roles.pilgrim", "1223479239815467095");
         properties.setProperty("paths.data.dir", "data");
         properties.setProperty("renown.roll.at", "00:05");
         properties.setProperty("renown.roll.zone", "America/New_York");
@@ -21,6 +23,8 @@ class ConfigLoaderTest {
         properties.setProperty("features.virtue.enabled", "true");
         properties.setProperty("features.houses.enabled", "true");
         properties.setProperty("features.titles.enabled", "false");
+        properties.setProperty("features.writs.enabled", "true");
+        properties.setProperty("features.path.enabled", "true");
         properties.setProperty("max.concurrent.operations", "3");
         properties.setProperty("command.cooldown.seconds", "3");
         return properties;

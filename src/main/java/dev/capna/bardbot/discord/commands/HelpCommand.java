@@ -40,6 +40,7 @@ public final class HelpCommand implements SlashCommand {
         topic.addChoice("Virtue", "virtue");
         topic.addChoice("Titles", "titles");
         topic.addChoice("Houses", "houses");
+        topic.addChoice("The Path of Virtue", "path");
 
         return Commands.slash(NAME, "How this bot works").addOptions(topic);
     }
@@ -52,6 +53,7 @@ public final class HelpCommand implements SlashCommand {
             case "virtue" -> virtue();
             case "titles" -> titles();
             case "houses" -> houses();
+            case "path" -> path();
             default -> overview();
         };
         event.replyEmbeds(help).setEphemeral(true).queue();
@@ -92,6 +94,11 @@ public final class HelpCommand implements SlashCommand {
                 + "`/house list`: see every house\n"
                 + "`/house leaderboard`: see which house is winning this month\n"
                 + "`/house accept`: join a house you have been invited to", false);
+
+        embed.addField("The Path of Virtue",
+                "`/path view`: see how far up the Path you are this month\n"
+                + "`/path voucher view`: see how many vouchers you are holding\n"
+                + "`/path voucher claim`: spend one on five virtue", false);
 
         return embed.build();
     }
@@ -263,6 +270,53 @@ public final class HelpCommand implements SlashCommand {
 
                         A house always needs at least one head, so the last one cannot leave or \
                         be stood down. Ask the tribunal if a house needs dissolving.""", false)
+                .build();
+    }
+
+    private MessageEmbed path() {
+        return new EmbedBuilder()
+                .setTitle("The Path of Virtue")
+                .setDescription("""
+                        The Path is a monthly ladder. If you are a **Pilgrim**, the virtue you \
+                        earn during the month unlocks rewards as you pass each line. Nothing is \
+                        spent, you just climb.
+
+                        **It is optional.** Everything else on the bot works the same whether \
+                        you are on the Path or not. The only thing the Pilgrim role changes is \
+                        whether the rewards below are yours when you reach them.
+
+                        The tribunal gives you the Pilgrim role when you buy in. Virtue you \
+                        earned earlier in the month still counts.""")
+                .addField("The ladder",
+                        """
+                        **10**: Virtue Voucher
+                        **25**: Virtue Voucher
+                        **35**: Monthly Prefix
+                        **50**: Gift Card Lottery Entry
+                        **60**: Second Lottery Entry
+                        **70**: Bonus Task Next Month
+                        **80**: Free Passage Next Month
+
+                        Run `/path view` to see where you are. A tick marks each line you have \
+                        passed, and the bottom says how far to the next one.""", false)
+                .addField("Vouchers",
+                        """
+                        A voucher is five virtue in whichever virtue you pick, for getting \
+                        somewhere you do not want to grind. The bot hands them out the moment \
+                        you cross the line, and they never expire.
+
+                        Run `/path voucher view` to see how many you have. Run \
+                        `/path voucher claim`, pick a virtue, and the five are awarded like any \
+                        other award. They count for your titles and your house's renown. They \
+                        do not count toward the Path.""", false)
+                .addField("The first of the month",
+                        """
+                        The Path starts again from zero. The tribunal is told who earned the \
+                        prefix, the lottery entries, the bonus task and free passage, and they \
+                        hand those out.
+
+                        Everyone loses the Pilgrim role, except anyone who reached 80: that is \
+                        what free passage means. Everyone else buys in again.""", false)
                 .build();
     }
 

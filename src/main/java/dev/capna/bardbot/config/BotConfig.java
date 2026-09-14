@@ -28,12 +28,15 @@ public record BotConfig(Discord discord,
      *                            role, because the tribunal is a body and Discord servers routinely
      *                            split a body across several roles. Empty is refused at startup:
      *                            with nobody privileged, half the bot is unreachable.
+     * @param emperorRoleId       who may strike an unreasonable writ task
+     * @param pilgrimRoleId       who unlocks rewards on the Path of Virtue
      *
      * <p>Which channel the bot posts in is deliberately not here. That is set by command and kept
      * in {@code ops}, because it changes whenever the server is reorganised and should not need a
      * file edit and a restart.
      */
-    public record Discord(String guildId, List<String> tribunalRoleIds) {
+    public record Discord(String guildId, List<String> tribunalRoleIds,
+                          String emperorRoleId, String pilgrimRoleId) {
     }
 
     /** @param dataDir durable state the bot owns: profiles, houses, titles, awards, settings */
@@ -62,6 +65,14 @@ public record BotConfig(Discord discord,
         public Path settings() {
             return dataDir.resolve("settings.json");
         }
+
+        public Path writs() {
+            return dataDir.resolve("writs.json");
+        }
+
+        public Path path() {
+            return dataDir.resolve("path.json");
+        }
     }
 
     /**
@@ -86,6 +97,7 @@ public record BotConfig(Discord discord,
      * Startup defaults only. Once running these live in {@code ops}, where an operator can change
      * them without a redeploy.
      */
-    public record Features(boolean profiles, boolean virtue, boolean houses, boolean titles) {
+    public record Features(boolean profiles, boolean virtue, boolean houses, boolean titles,
+                           boolean writs, boolean path) {
     }
 }

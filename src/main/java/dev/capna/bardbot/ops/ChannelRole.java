@@ -33,7 +33,24 @@ public enum ChannelRole {
     RENOWN("renown", "Monthly renown"),
 
     /** Warnings and errors, mirrored out of the console. */
-    CONSOLE("console", "Console");
+    CONSOLE("console", "Console"),
+
+    /**
+     * Writs being served, completed and struck.
+     *
+     * <p>Its own channel rather than the awards one, because a writ is tribunal business and the
+     * notice pings the people involved. Buried in a stream of awards it would be missed, and
+     * posted where everyone reads it would be noise.
+     */
+    WRITS("writs", "Writs"),
+
+    /**
+     * The Virtue Board, where public writ tasks are posted.
+     *
+     * <p>The only role that has to be a forum rather than a text channel. Each task is a post of
+     * its own there, so the community can pick one up and talk about it under it.
+     */
+    VIRTUE_BOARD("virtueboard", "The Virtue Board");
 
     private final String key;
     private final String display;

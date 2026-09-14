@@ -131,6 +131,36 @@ public final class AwardLog {
         return byHouse;
     }
 
+    /**
+     * What one Bard earned within a month, leaving out anything claimed with a voucher.
+     *
+     * <p>This is the figure the Path of Virtue measures. Voucher virtue is real everywhere else,
+     * but counting it here would let two vouchers carry somebody most of the way to a third.
+     */
+    public synchronized int earnedIn(String userId, YearMonth month, ZoneId zone) {
+        load();
+        int earned = 0;
+        for (Award award : awards) {
+            if (award.recipientId().equals(userId) && !award.voucher()
+                    && YearMonth.from(award.at().atZone(zone)).equals(month)) {
+                earned += award.amount();
+            }
+        }
+        return earned;
+    }
+
+    /** Everyone who earned anything within a month, with what they earned. Vouchers left out. */
+    public synchronized Map<String, Integer> earnedIn(YearMonth month, ZoneId zone) {
+        load();
+        Map<String, Integer> byUser = new HashMap<>();
+        for (Award award : awards) {
+            if (!award.voucher() && YearMonth.from(award.at().atZone(zone)).equals(month)) {
+                byUser.merge(award.recipientId(), award.amount(), Integer::sum);
+            }
+        }
+        return byUser;
+    }
+
     /** What each house has earned in its entire existence. */
     public synchronized Map<String, Integer> renownAllTime() {
         load();
@@ -173,6 +203,10 @@ public final class AwardLog {
                     .put("at", award.at().toString());
             award.reason().ifPresent(reason -> json.put("reason", reason));
             award.houseId().ifPresent(house -> json.put("house", house));
+            // Written only when set, so a log from before vouchers existed reads back unchanged.
+            if (award.voucher()) {
+                json.put("voucher", true);
+            }
             array.put(json);
         }
         AtomicFiles.writeString(file, array.toString(2));
@@ -204,7 +238,8 @@ public final class AwardLog {
                         json.getInt("amount"),
                         optional(json, "reason"),
                         optional(json, "house"),
-                        Instant.parse(json.getString("at"))));
+                        Instant.parse(json.getString("at")),
+                        json.optBoolean("voucher", false)));
             }
             LOG.info("Read {} award(s) from {}", awards.size(), file);
         } catch (IOException | JSONException | java.time.format.DateTimeParseException e) {

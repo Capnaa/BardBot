@@ -15,7 +15,9 @@ import dev.capna.bardbot.ops.SettingsStore;
 import dev.capna.bardbot.store.CatalogueStore;
 import dev.capna.bardbot.store.HouseStore;
 import dev.capna.bardbot.store.ProfileStore;
+import dev.capna.bardbot.store.WritStore;
 import net.dv8tion.jda.api.EmbedBuilder;
+import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.entities.MessageEmbed;
 import net.dv8tion.jda.api.entities.User;
 import net.dv8tion.jda.api.events.interaction.command.CommandAutoCompleteInteractionEvent;
@@ -55,15 +57,18 @@ public final class AdminCommand implements SlashCommand {
     private final HouseStore houses;
     private final ProfileStore profiles;
     private final LiveBoards boards;
+    private final WritStore writs;
 
     public AdminCommand(Tribunal tribunal, SettingsStore settings, CatalogueStore catalogue,
-                        HouseStore houses, ProfileStore profiles, LiveBoards boards) {
+                        HouseStore houses, ProfileStore profiles, LiveBoards boards,
+                        WritStore writs) {
         this.tribunal = Objects.requireNonNull(tribunal, "tribunal");
         this.settings = Objects.requireNonNull(settings, "settings");
         this.catalogue = Objects.requireNonNull(catalogue, "catalogue");
         this.houses = Objects.requireNonNull(houses, "houses");
         this.profiles = Objects.requireNonNull(profiles, "profiles");
         this.boards = Objects.requireNonNull(boards, "boards");
+        this.writs = Objects.requireNonNull(writs, "writs");
     }
 
     @Override
@@ -139,7 +144,13 @@ public final class AdminCommand implements SlashCommand {
                                         new SubcommandData("revoke", "Take one back")
                                                 .addOption(OptionType.USER, "bard", "Who", true)
                                                 .addOption(OptionType.STRING, "title", "Which one",
-                                                        true, true)));
+                                                        true, true)),
+                        new SubcommandGroupData("writ", "Fix a tribunal member's writ count")
+                                .addSubcommands(
+                                        new SubcommandData("add", "Give them one, up to the cap")
+                                                .addOption(OptionType.USER, "member", "Who", true),
+                                        new SubcommandData("remove", "Take one away")
+                                                .addOption(OptionType.USER, "member", "Who", true)));
     }
 
     @Override
@@ -165,8 +176,32 @@ public final class AdminCommand implements SlashCommand {
             case "house" -> house(event, subcommand);
             case "title" -> title(event, subcommand);
             case "leaderboard" -> leaderboard(event, subcommand);
+            case "writ" -> writ(event, subcommand);
             default -> Replies.problem(event, "That is not something this command does.");
         }
+    }
+
+    /**
+     * Moves a count by one.
+     *
+     * <p>For seeding at launch and fixing mistakes. The monthly grant is how writs normally
+     * arrive, and this is deliberately no faster than that: one at a time, and never past the cap.
+     */
+    private void writ(SlashCommandInteractionEvent event, String subcommand) throws Exception {
+        Member member = event.getOption("member", OptionMapping::getAsMember);
+        if (member == null || !tribunal.holds(member)) {
+            Replies.problem(event, "Only a tribunal member can hold writs.");
+            return;
+        }
+        int before = writs.held(member.getId());
+        int after = writs.adjust(member.getId(), "add".equals(subcommand) ? 1 : -1);
+        if (after == before) {
+            Replies.problem(event, member.getEffectiveName() + " already holds " + after
+                    + (after == WritStore.MAX_HELD ? ", which is the cap." : "."));
+            return;
+        }
+        Replies.quietly(event, member.getEffectiveName() + " now holds " + after + " of "
+                + WritStore.MAX_HELD + ".");
     }
 
     /**
@@ -399,8 +434,11 @@ public final class AdminCommand implements SlashCommand {
                         messages belong there:
 
                         **Awards**: every award. **Unlocks**: only when somebody reaches a \
-                        goal. **Renown**: the monthly house results; use a channel only the \
-                        tribunal can read. **Console**: the bot's own errors.
+                        goal. **Renown**: the monthly house results and the Path of Virtue \
+                        summary; use a channel only the tribunal can read. **Console**: the \
+                        bot's own errors. **Writs**: writs being served, completed and struck. \
+                        **The Virtue Board**: where public writ tasks are posted. This one has \
+                        to be a forum, so run the command inside the forum.
 
                         You can point more than one at the same channel.""", false)
                 .addField("Goals and titles",
@@ -425,6 +463,43 @@ public final class AdminCommand implements SlashCommand {
                         `/admin leaderboard house`. The bot posts one message there and keeps \
                         editing it as awards come in. Do not delete that message, if you do, \
                         run the command again to make a new one.""", false)
+                .addField("Imperial writs",
+                        """
+                        A writ lets you hand out work. Everyone on the tribunal gets one on the \
+                        first of the month and can hold two at most. If you are already holding \
+                        two, the new one is lost, so spend them.
+
+                        `/tribunal writ task`: spend a writ on a public task. A box opens for \
+                        the title, description, due date and virtue. It becomes a post in The \
+                        Virtue Board starting with "Tribunal", and anyone can do it for virtue.
+                        `/tribunal writ use`: spend a writ on a task for another tribunal \
+                        member. They get pinged in the writ channel. When they finish it, the \
+                        writ is theirs.
+                        `/tribunal writ view`: your writs, the tasks on you, and the tasks you \
+                        have served on others. The numbers here are what the next three take.
+                        `/tribunal writ complete`: mark a task on you done. A box asks for \
+                        coords or a link; fill in at least one.
+                        `/tribunal writ cancel`: take back a task you served. The writ comes \
+                        back to you.
+                        `/tribunal writ strike`: Emperor only. Throw out an unreasonable task. \
+                        The writ goes back to whoever served it.
+
+                        Due dates are written like `2026-09-20`.
+                        `/admin writ add` and `remove`: fix a count by one, for setting up or \
+                        correcting a mistake.""", false)
+                .addField("The Path of Virtue",
+                        """
+                        A monthly ladder for whoever holds the Pilgrim role. **You add that role \
+                        by hand when somebody buys in.** The bot never adds it.
+
+                        The bot hands out the vouchers itself, the moment somebody crosses 10 \
+                        or 25 virtue. Everything above that is yours to do: on the first of the \
+                        month the bot posts to the renown channel who earned the prefix, the \
+                        lottery entries, the bonus task and free passage, then takes the role \
+                        off everyone who did not reach 80. The ones who did keep it.
+
+                        Voucher virtue is real virtue and counts for titles and renown. It does \
+                        not count toward the Path.""", false)
                 .build();
     }
 }

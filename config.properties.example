@@ -9,6 +9,11 @@ discord.guild.id=YOUR_GUILD_ID
 # One or more role IDs, separated by commas. Required: with nobody privileged, half the bot
 # is unreachable.
 discord.roles.tribunal=YOUR_TRIBUNAL_ROLE_ID
+# Who may strike a writ task that was unreasonable. One role ID.
+discord.roles.emperor=YOUR_EMPEROR_ROLE_ID
+# Who is on the Path of Virtue this month. The tribunal adds this role by hand when somebody
+# buys in; the bot only ever removes it. One role ID.
+discord.roles.pilgrim=YOUR_PILGRIM_ROLE_ID
 # Which channels the bot posts in is NOT set here. Use /admin channel in the channel you
 # want, so it can be changed without a restart.
 
@@ -27,6 +32,8 @@ features.profiles.enabled=true
 features.virtue.enabled=true
 features.houses.enabled=true
 features.titles.enabled=true
+features.writs.enabled=true
+features.path.enabled=true
 
 ### Limits ###
 max.concurrent.operations=3

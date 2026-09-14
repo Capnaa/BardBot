@@ -116,4 +116,23 @@ class AwardLogTest {
         log.append(award("bard", Virtue.HONOR, 2, null, "2026-05-09T12:00:00Z"));
         assertEquals(2, log.history("bard", 10).get(0).amount());
     }
+
+    /**
+     * A voucher is real virtue everywhere except on the ladder that paid for it. Otherwise two
+     * vouchers would be most of the way to a third.
+     */
+    @Test
+    void vouchersCountForEverythingButThePath() throws IOException {
+        AwardLog log = log();
+        log.append(award("bard", Virtue.HONOR, 10, "vale", "2026-05-01T12:00:00Z"));
+        log.append(new Award("bard", "bard", Virtue.GLORY, 5, Optional.of("Virtue Voucher"),
+                Optional.of("vale"), Instant.parse("2026-05-02T12:00:00Z"), true));
+
+        assertEquals(15, log.total("bard"));
+        assertEquals(15, log.renown(YearMonth.of(2026, 5), NEW_YORK).get("vale"));
+        assertEquals(10, log.earnedIn("bard", YearMonth.of(2026, 5), NEW_YORK));
+
+        // And the flag survives the file, or a restart would quietly start counting it.
+        assertEquals(10, log().earnedIn("bard", YearMonth.of(2026, 5), NEW_YORK));
+    }
 }

@@ -8,6 +8,7 @@ import dev.capna.bardbot.discord.Tribunal;
 import dev.capna.bardbot.model.Award;
 import dev.capna.bardbot.model.Virtue;
 import dev.capna.bardbot.ops.Feature;
+import dev.capna.bardbot.path.PathOfVirtue;
 import dev.capna.bardbot.store.ProfileStore;
 import dev.capna.bardbot.virtue.Awarding;
 import dev.capna.bardbot.virtue.Unlocks;
@@ -52,14 +53,16 @@ public final class AwardVirtueCommand implements SlashCommand {
     private final Unlocks unlocks;
     private final ProfileStore profiles;
     private final LiveBoards boards;
+    private final PathOfVirtue path;
 
     public AwardVirtueCommand(Tribunal tribunal, Awarding awarding, Unlocks unlocks,
-                              ProfileStore profiles, LiveBoards boards) {
+                              ProfileStore profiles, LiveBoards boards, PathOfVirtue path) {
         this.tribunal = Objects.requireNonNull(tribunal, "tribunal");
         this.awarding = Objects.requireNonNull(awarding, "awarding");
         this.unlocks = Objects.requireNonNull(unlocks, "unlocks");
         this.profiles = Objects.requireNonNull(profiles, "profiles");
         this.boards = Objects.requireNonNull(boards, "boards");
+        this.path = Objects.requireNonNull(path, "path");
     }
 
     @Override
@@ -159,6 +162,7 @@ public final class AwardVirtueCommand implements SlashCommand {
                 .queue();
 
         unlocks.announce(event.getJDA(), recipientId, result.crossed());
+        path.advance(event.getJDA(), recipientId);
         boards.refreshSoon(event.getJDA());
         Replies.quietly(event, "Awarded.");
     }

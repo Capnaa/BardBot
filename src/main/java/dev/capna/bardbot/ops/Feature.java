@@ -13,5 +13,7 @@ public enum Feature {
     PROFILES,
     VIRTUE,
     HOUSES,
-    TITLES
+    TITLES,
+    WRITS,
+    PATH
 }

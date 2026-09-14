@@ -38,6 +38,8 @@ Anyone:
 | `/house view`, `/house list` | Houses, their renown and their people |
 | `/house leaderboard`, `/house winner` | Renown this month, all time, and last month's result |
 | `/house accept`, `/decline`, `/leave` | Joining and leaving |
+| `/path view` | Where you are on the Path of Virtue this month |
+| `/path voucher view`, `/path voucher claim` | Virtue Vouchers, and spending one |
 | `/help` | How all of it works |
 
 House heads, on their own house: `/house edit`, `/house invite`, `/house expel`, and
@@ -49,11 +51,17 @@ Tribunal only:
 | --- | --- |
 | Apps to Award Virtue | Right click a message to award the Bard who posted it |
 | `/award` | Award without a message to point at |
-| `/admin channel set` | Where awards, unlocks, renown and console output are posted |
+| `/admin channel set` | Where awards, unlocks, renown, console output, writs and public tasks go |
 | `/admin goal add\|remove\|list` | Virtue thresholds and the titles behind them |
 | `/admin house add\|remove\|addhead\|removehead` | Founding and running houses |
 | `/admin title grant\|revoke` | Government titles |
 | `/admin leaderboard virtue\|house` | Plant a board that keeps itself up to date |
+| `/admin writ add\|remove` | Fix a tribunal member's writ count by one |
+| `/tribunal writ view` | Your writs, the tasks on you, and the tasks you have served |
+| `/tribunal writ task` | Spend a writ on a public task in The Virtue Board |
+| `/tribunal writ use` | Spend a writ on a task for another tribunal member |
+| `/tribunal writ complete\|cancel` | Finish a task on you, or take back one you served |
+| `/tribunal writ strike` | Emperor only. Throw out an unreasonable task |
 | `/admin help` | How all of that works |
 
 ### Awarding
@@ -89,12 +97,31 @@ roll catches up on every month it missed if the bot was down across a boundary.
 `/house winner` reads that archive rather than recomputing, so a late correction cannot rewrite who
 won.
 
+Two more things happen on the same check. Every tribunal member holding fewer than two writs gets
+one. And the Path of Virtue rolls: the tribunal is told who earned what, and the Pilgrim role comes
+off everyone who did not reach the top line. Both remember the month the same way the archive does,
+so neither can run twice.
+
+### Writs
+
+A writ is a token that lets a tribunal member hand out work. Spending one either burns it on a
+public task, posted to The Virtue Board for anyone to do, or locks it into a task for another
+tribunal member, who gets the writ when they finish. The cap is two, so they cannot pile up.
+
+### The Path of Virtue
+
+An optional monthly ladder for whoever holds the Pilgrim role, which the tribunal adds by hand when
+somebody buys in. Progress is the virtue earned since the first, the same window renown uses, so
+there is nothing to reset. The bot hands out the vouchers itself; everything higher is a name on
+the first of the month's list. Voucher virtue is real virtue everywhere except on the Path.
+
 ## Setup
 
 1. `cp .env.example .env` and fill in `DISCORD_TOKEN`. That file is gitignored; keep it that way.
-2. `cp config.properties.example config.properties` and fill in `discord.guild.id` and
-   `discord.roles.tribunal`. Set `renown.roll.zone` to whatever the guild considers its own time,
-   since it decides where a month begins.
+2. `cp config.properties.example config.properties` and fill in `discord.guild.id`,
+   `discord.roles.tribunal`, `discord.roles.emperor` and `discord.roles.pilgrim`. Set
+   `renown.roll.zone` to whatever the guild considers its own time, since it decides where a month
+   begins.
 3. `mvn package`, then run the jar from `target/`.
 
 Configuration is read from the filesystem beside the jar, not from inside it, so editing it and

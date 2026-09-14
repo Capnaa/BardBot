@@ -52,7 +52,9 @@ public final class ConfigLoader {
         BotConfig config = new BotConfig(
                 new BotConfig.Discord(
                         id("discord.guild.id"),
-                        ids("discord.roles.tribunal")),
+                        ids("discord.roles.tribunal"),
+                        id("discord.roles.emperor"),
+                        id("discord.roles.pilgrim")),
                 new BotConfig.Paths(
                         path("paths.data.dir", "data")),
                 new BotConfig.Renown(
@@ -65,7 +67,9 @@ public final class ConfigLoader {
                         flag("features.profiles.enabled"),
                         flag("features.virtue.enabled"),
                         flag("features.houses.enabled"),
-                        flag("features.titles.enabled")));
+                        flag("features.titles.enabled"),
+                        flag("features.writs.enabled"),
+                        flag("features.path.enabled")));
 
         if (!problems.isEmpty()) {
             throw new ConfigException(problems);
