@@ -12,6 +12,7 @@ import dev.capna.bardbot.discord.commands.AwardCommand;
 import dev.capna.bardbot.discord.commands.AwardVirtueCommand;
 import dev.capna.bardbot.discord.commands.HelpCommand;
 import dev.capna.bardbot.discord.commands.HouseCommand;
+import dev.capna.bardbot.discord.commands.MassAwardCommand;
 import dev.capna.bardbot.discord.commands.PathCommand;
 import dev.capna.bardbot.discord.commands.TribunalCommand;
 import dev.capna.bardbot.houses.MonthRoll;
@@ -135,6 +136,9 @@ public final class Application implements AutoCloseable {
         registry.add(new ProfileCommand(profiles, houses, awards, titleHoldings))
                 .add(new AwardCommand(tribunal, awarding, unlockAnnouncer, profiles, settings,
                         boards, path))
+                .add(new MassAwardCommand(tribunal, awarding, unlockAnnouncer, settings, boards,
+                        path))
+
                 .add(new AwardVirtueCommand(tribunal, awarding, unlockAnnouncer, profiles, boards,
                         path))
                 .add(new VirtueCommand(awards, catalogue, profiles, config.renown().zone()))

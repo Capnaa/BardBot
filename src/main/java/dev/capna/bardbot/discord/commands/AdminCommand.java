@@ -509,6 +509,22 @@ public final class AdminCommand implements SlashCommand {
                         **To take an award back, award a negative amount**: for example `-3`. \
                         Awards are never deleted, so the record shows what happened and the \
                         correction alongside it.""", false)
+                .addField("Awarding a group at once",
+                        """
+                        `/massaward`: the same virtue and amount to several Bards. Use it for a \
+                        war, a build day or an event.
+
+                        Pick the virtue and amount, then pick each Bard in the `bard1`, `bard2`, \
+                        `bard3` boxes and so on, up to twelve. Only `bard1` is required; leave \
+                        the rest empty.
+
+                        For a longer list, paste it into `more` as mentions or IDs. The same \
+                        Bard twice is awarded once and bots are skipped.
+
+                        It posts **one** message naming everyone rather than one per Bard. Each \
+                        award is a normal award underneath, so it shows in `/virtue history` and \
+                        counts for houses as usual. **To undo one, run it again with the same \
+                        Bards and a negative amount.**""", false)
                 .addField("Setting up channels",
                         """
                         Go to the channel you want, then run `/admin channel set` and pick which \

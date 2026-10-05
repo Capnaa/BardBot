@@ -51,6 +51,7 @@ Tribunal only:
 | --- | --- |
 | Apps to Award Virtue | Right click a message to award the Bard who posted it |
 | `/award` | Award without a message to point at |
+| `/massaward` | The same award to several Bards at once |
 | `/admin channel set` | Where awards, unlocks, renown, console output, writs and public tasks go |
 | `/admin goal add\|remove\|list` | Virtue thresholds and the titles behind them |
 | `/admin house add\|remove\|addhead\|removehead` | Founding and running houses |
@@ -73,6 +74,12 @@ to that message with the award and the Bard's new scores. A slash command cannot
 to a message, which is why this is a message command rather than `/award` with a message link.
 
 Awards can be negative, and that is the correction path.
+
+`/massaward` gives the same award to several Bards at once, for a war or an event. They are picked
+one at a time from Discord's own chooser, twelve at most, with a box to paste a longer list into.
+Each one is recorded as an ordinary award, so histories, renown and corrections all behave
+normally; only the announcement is pooled into one message. Undoing one is the same command with a
+negative amount, which is why it needs no confirmation step.
 
 ### Titles
 

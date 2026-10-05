@@ -1,11 +1,13 @@
 package dev.capna.bardbot.discord;
 
 import dev.capna.bardbot.model.Profile;
+import dev.capna.bardbot.model.Virtue;
 import dev.capna.bardbot.virtue.Awarding;
 import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.entities.MessageEmbed;
 import net.dv8tion.jda.api.entities.User;
 
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -43,6 +45,60 @@ public final class AwardEmbed {
                         + "```", false)
                 .setFooter("Awarded by @" + granter.getName(), null)
                 .build();
+    }
+
+    /**
+     * One award made to many Bards at once.
+     *
+     * <p>A single embed rather than one per Bard. Fifteen embeds for one decision is a channel
+     * nobody reads afterwards, and the thing worth recording here is that the same award went to
+     * this list of people for this reason.
+     *
+     * <p>Every recipient is named, and mentioned, so anybody can check they are on the list. That
+     * is also what makes a mistake correctable: the list is right there to be awarded the opposite
+     * amount.
+     *
+     * @param names who received it, already in the order they were awarded
+     */
+    public static MessageEmbed bulk(Virtue virtue, int amount, List<String> recipientIds,
+                                    List<String> names, Optional<String> reason, User granter) {
+        String headline = signed(amount) + " " + virtue.display() + " to "
+                + recipientIds.size() + (recipientIds.size() == 1 ? " Bard" : " Bards");
+
+        EmbedBuilder embed = new EmbedBuilder()
+                .setTitle(virtue.display() + " awarded")
+                .setDescription(reason
+                        .map(text -> headline + "\nFor: " + Names.escaped(text))
+                        .orElse(headline))
+                .setColor(Ansi.rgb(virtue))
+                .setFooter("Awarded by @" + granter.getName(), null);
+
+        // Mentions, so each Bard is pinged once and can see the award landed on them. Trimmed to
+        // what an embed field will hold, with the rest counted rather than silently dropped.
+        StringBuilder listed = new StringBuilder();
+        int shown = 0;
+        for (String id : recipientIds) {
+            String mention = "<@" + id + ">";
+            if (listed.length() + mention.length() + 2 > MentionLimit.FIELD) {
+                break;
+            }
+            if (shown > 0) {
+                listed.append(", ");
+            }
+            listed.append(mention);
+            shown++;
+        }
+        if (shown < recipientIds.size()) {
+            listed.append(" and ").append(recipientIds.size() - shown).append(" more");
+        }
+        embed.addField(shown == recipientIds.size() ? "Who" : "Who (first " + shown + ")",
+                listed.toString(), false);
+        return embed.build();
+    }
+
+    /** Discord refuses an embed field over this, and a refused embed is an award nobody saw. */
+    private static final class MentionLimit {
+        static final int FIELD = 900;
     }
 
     /** A positive award reads {@code +3}, so it is never mistaken for the score itself. */
