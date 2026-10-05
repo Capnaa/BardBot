@@ -10,6 +10,7 @@ import dev.capna.bardbot.model.Virtue;
 import dev.capna.bardbot.ops.ChannelRole;
 import dev.capna.bardbot.ops.Feature;
 import dev.capna.bardbot.ops.SettingsStore;
+import dev.capna.bardbot.path.PathCard;
 import dev.capna.bardbot.path.PathOfVirtue;
 import dev.capna.bardbot.store.PathStore;
 import dev.capna.bardbot.store.ProfileStore;
@@ -26,6 +27,7 @@ import net.dv8tion.jda.api.interactions.commands.build.Commands;
 import net.dv8tion.jda.api.interactions.commands.build.OptionData;
 import net.dv8tion.jda.api.interactions.commands.build.SubcommandData;
 import net.dv8tion.jda.api.interactions.commands.build.SubcommandGroupData;
+import net.dv8tion.jda.api.utils.FileUpload;
 import net.dv8tion.jda.api.utils.messages.MessageCreateData;
 
 import java.util.Arrays;
@@ -48,14 +50,16 @@ public final class PathCommand implements SlashCommand {
     private final SettingsStore settings;
     private final Unlocks unlocks;
     private final LiveBoards boards;
+    private final PathCard card;
 
     public PathCommand(PathOfVirtue path, ProfileStore profiles, SettingsStore settings,
-                       Unlocks unlocks, LiveBoards boards) {
+                       Unlocks unlocks, LiveBoards boards, PathCard card) {
         this.path = Objects.requireNonNull(path, "path");
         this.profiles = Objects.requireNonNull(profiles, "profiles");
         this.settings = Objects.requireNonNull(settings, "settings");
         this.unlocks = Objects.requireNonNull(unlocks, "unlocks");
         this.boards = Objects.requireNonNull(boards, "boards");
+        this.card = Objects.requireNonNull(card, "card");
     }
 
     @Override
@@ -105,15 +109,46 @@ public final class PathCommand implements SlashCommand {
             return;
         }
         if ("view".equals(subcommand)) {
-            event.replyEmbeds(progress(event)).setEphemeral(true).queue();
+            view(event);
         } else {
             Replies.problem(event, "That is not something this command does.");
         }
     }
 
-    private MessageEmbed progress(SlashCommandInteractionEvent event) {
-        String userId = event.getUser().getId();
-        int earned = path.earnedThisMonth(userId);
+    /**
+     * Where the Bard is on the Path, as a picture with the ladder under it.
+     *
+     * <p>Deferred, because drawing the card fetches a face from Discord's CDN and three seconds is
+     * not a promise worth making over somebody else's network. The embed is sent whether or not
+     * the card could be drawn, so a card that fails costs the picture and nothing else.
+     *
+     * <p>Shown to the channel rather than quietly. The Path is a thing people buy into and
+     * compare, and a card nobody else can see is a card nobody mentions.
+     */
+    private void view(SlashCommandInteractionEvent event) {
+        Replies.defer(event, NAME);
+
+        int earned = path.earnedThisMonth(event.getUser().getId());
+        Optional<byte[]> drawn = card.render(
+                event.getMember() == null
+                        ? event.getUser().getEffectiveName()
+                        : event.getMember().getEffectiveName(),
+                earned,
+                profiles.get(event.getUser().getId()).imageUrl(),
+                event.getUser().getEffectiveAvatarUrl());
+
+        MessageEmbed embed = progress(event, earned);
+        if (drawn.isEmpty()) {
+            event.getHook().sendMessageEmbeds(embed).queue();
+            return;
+        }
+        event.getHook()
+                .sendMessageEmbeds(new EmbedBuilder(embed).setImage("attachment://path.png").build())
+                .setFiles(FileUpload.fromData(drawn.get(), "path.png"))
+                .queue();
+    }
+
+    private MessageEmbed progress(SlashCommandInteractionEvent event, int earned) {
         boolean pilgrim = path.isPilgrim(event.getMember());
 
         StringBuilder rows = new StringBuilder(Ansi.FENCE);

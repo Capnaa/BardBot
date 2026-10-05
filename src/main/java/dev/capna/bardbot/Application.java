@@ -19,6 +19,8 @@ import dev.capna.bardbot.houses.Renown;
 import dev.capna.bardbot.discord.commands.ProfileCommand;
 import dev.capna.bardbot.discord.commands.TitleCommand;
 import dev.capna.bardbot.discord.commands.VirtueCommand;
+import dev.capna.bardbot.path.Avatars;
+import dev.capna.bardbot.path.PathCard;
 import dev.capna.bardbot.path.PathOfVirtue;
 import dev.capna.bardbot.path.PathRoll;
 import dev.capna.bardbot.titles.Titles;
@@ -141,7 +143,8 @@ public final class Application implements AutoCloseable {
                         writs, registry))
                 .add(new HouseCommand(houses, profiles, houseRenown, renown))
                 .add(new TribunalCommand(tribunal, emperor, writs, settings))
-                .add(new PathCommand(path, profiles, settings, unlockAnnouncer, boards))
+                .add(new PathCommand(path, profiles, settings, unlockAnnouncer, boards,
+                        new PathCard(new Avatars())))
                 .add(new HelpCommand());
     }
 

@@ -38,7 +38,7 @@ Anyone:
 | `/house view`, `/house list` | Houses, their renown and their people |
 | `/house leaderboard`, `/house winner` | Renown this month, all time, and last month's result |
 | `/house accept`, `/decline`, `/leave` | Joining and leaving |
-| `/path view` | Where you are on the Path of Virtue this month |
+| `/path view` | Your card: where you stand on the Path this month |
 | `/path voucher view`, `/path voucher claim` | Virtue Vouchers, and spending one |
 | `/help` | How all of it works |
 
@@ -148,12 +148,19 @@ explicitly handed.
 
 ## Security
 
-The bot talks to Discord and nothing else. It has no Minecraft client, no database, and makes no
-requests of its own: character images and house crests are links handed to Discord to fetch, so a
-Bard editing their own profile cannot point the bot at anything.
+The bot talks to Discord, and fetches a picture in exactly one class. It has no Minecraft client
+and no database. Character images and house crests are links handed to Discord to fetch, so a Bard
+editing their own profile cannot point the bot at anything.
 
-That is enforced rather than promised. `NoNetworkTest` fails the build if any class in the project
-reaches for the network.
+The exception is `Avatars`, which the Path card needs because a Bard's face has to be drawn into
+the image before it is uploaded, and Discord cannot do that on the bot's behalf. A character image
+is a URL somebody typed into their own profile, so that one fetch is fenced: https only on the
+default port, a short list of hosts known to serve images, redirects never followed, and the
+address it resolves to must be a public one. Anything else is refused and the card falls back to a
+plain tile. `AvatarsTest` holds those rules.
+
+That is enforced rather than promised. `NoNetworkTest` fails the build if any class other than
+`Avatars` reaches for the network, so the exception cannot quietly become two.
 
 The token lives only in the environment. Configuration and runtime state are gitignored, and
 neither is ever quoted in a log or a reply.

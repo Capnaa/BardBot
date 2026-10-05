@@ -287,6 +287,15 @@ public final class HelpCommand implements SlashCommand {
 
                         The tribunal gives you the Pilgrim role when you buy in. Virtue you \
                         earned earlier in the month still counts.""")
+                .addField("Your card",
+                        """
+                        Run `/path view`. The bot draws you on a dirt track running towards a \
+                        dandelion, standing wherever this month's virtue has got you. The numbers \
+                        along the track light up as you pass them.
+
+                        It uses your character image from `/profile edit identity`, or your \
+                        Discord avatar if you have not set one. Reach the end and the picture \
+                        changes.""", false)
                 .addField("The ladder",
                         """
                         **10**: Virtue Voucher
